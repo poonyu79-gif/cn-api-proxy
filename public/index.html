@@ -3,269 +3,531 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>星桥 API - 像用电一样用AI</title>
+<title>星桥 API - 面向生产环境的企业级 API 中转平台</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 <style>
-  [x-cloak]{display:none}
-  .gradient-text{background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-  .card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(10px)}
-  body{background:#0f0f1a;color:#e2e8f0;font-family:'PingFang SC','Microsoft YaHei',sans-serif}
-  .btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);transition:opacity .2s}
-  .btn-primary:hover{opacity:.85}
-  .nav-link{cursor:pointer;padding:6px 14px;border-radius:6px;transition:background .2s}
-  .nav-link:hover{background:rgba(255,255,255,0.1)}
-  .tab-btn{padding:8px 20px;border-radius:8px;transition:all .2s;cursor:pointer}
-  .tab-btn.active{background:linear-gradient(135deg,#667eea,#764ba2)}
-  input,select,textarea{background:rgba(255,255,255,0.08)!important;border:1px solid rgba(255,255,255,0.15)!important;color:#e2e8f0!important;border-radius:8px;padding:10px 14px;width:100%;outline:none;transition:border .2s}
-  input:focus,select:focus{border-color:#667eea!important}
-  input::placeholder{color:#94a3b8}
-  select option{background:#1e1e3a;color:#e2e8f0}
-  .toast{position:fixed;top:24px;right:24px;z-index:9999;padding:12px 20px;border-radius:10px;font-size:14px;animation:fadeIn .3s}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
-  .copy-btn{cursor:pointer;padding:4px 10px;border-radius:6px;background:rgba(102,126,234,0.3);font-size:12px;transition:background .2s}
-  .copy-btn:hover{background:rgba(102,126,234,0.6)}
+  [x-cloak]{display:none!important}
+  *{box-sizing:border-box}
+  body{font-family:'PingFang SC','Helvetica Neue',Arial,sans-serif;background:#ffffff;color:#111827;margin:0}
+
+  /* 网格背景 */
+  .grid-bg{
+    background-color:#f9fafb;
+    background-image:linear-gradient(rgba(99,102,241,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,.07) 1px,transparent 1px);
+    background-size:40px 40px;
+  }
+
+  /* 渐变色文字 */
+  .gradient-text{background:linear-gradient(135deg,#3b82f6,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+  /* 渐变按钮 */
+  .btn-primary{background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;border:none;transition:opacity .2s,transform .15s}
+  .btn-primary:hover{opacity:.88;transform:translateY(-1px)}
+
+  /* 导航 */
+  nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(0,0,0,.06)}
+
+  /* 状态标签 */
+  .status-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:12px;border:1px solid}
+  .pill-green{background:#f0fdf4;border-color:#bbf7d0;color:#16a34a}
+  .pill-blue{background:#eff6ff;border-color:#bfdbfe;color:#2563eb}
+
+  /* 卡片 */
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;transition:box-shadow .2s,transform .2s}
+  .card:hover{box-shadow:0 8px 30px rgba(0,0,0,.08);transform:translateY(-2px)}
+  .card-flat{background:#fff;border:1px solid #e5e7eb;border-radius:12px}
+
+  /* 代码终端 */
+  .terminal{background:#0f1117;border-radius:12px;overflow:hidden}
+  .terminal-bar{background:#1c1f26;padding:12px 16px;display:flex;align-items:center;gap:6px}
+  .dot{width:12px;height:12px;border-radius:50%}
+
+  /* 步骤数字 */
+  .step-num{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+
+  /* 表单输入 */
+  .inp{width:100%;border:1px solid #d1d5db;border-radius:8px;padding:10px 14px;font-size:14px;outline:none;transition:border .2s;background:#fff;color:#111}
+  .inp:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+  .inp::placeholder{color:#9ca3af}
+
+  /* 模型标签 */
+  .model-tag{padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500}
+
+  /* Toast */
+  .toast{position:fixed;top:76px;right:20px;z-index:9999;padding:10px 18px;border-radius:8px;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,.15);animation:slideIn .25s ease}
+  @keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+
+  /* 平台状态指示 */
+  .pulse-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;position:relative}
+  .pulse-dot::after{content:'';position:absolute;inset:-3px;border-radius:50%;background:#22c55e;opacity:.3;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{transform:scale(1);opacity:.3}50%{transform:scale(1.5);opacity:0}}
+
+  /* 标签切换 */
+  .tab-active{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.1);color:#111}
+  .tab-inactive{color:#6b7280}
+  .tab-inactive:hover{color:#111}
+
+  /* 响应式 */
+  @media(max-width:768px){
+    .hide-mobile{display:none!important}
+    .hero-title{font-size:2rem!important}
+  }
 </style>
 </head>
 <body x-data="app()" x-cloak>
 
 <!-- Toast -->
-<div x-show="toast.show" class="toast" :class="toast.type==='ok'?'bg-green-600':'bg-red-600'" x-text="toast.msg"></div>
+<div x-show="toast.show" class="toast" :class="toast.ok?'bg-green-50 text-green-700 border border-green-200':'bg-red-50 text-red-700 border border-red-200'" x-text="toast.msg"></div>
 
-<!-- 导航 -->
-<nav class="fixed top-0 left-0 right-0 z-50 border-b border-white/10" style="background:rgba(15,15,26,0.95);backdrop-filter:blur(10px)">
-  <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-    <div class="text-xl font-bold gradient-text cursor-pointer" @click="page='home'">⚡ 星桥 API</div>
+<!-- 导航栏 -->
+<nav>
+  <div class="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+    <!-- Logo -->
+    <div class="flex items-center gap-2 cursor-pointer" @click="goto('home')">
+      <div style="width:30px;height:30px;background:linear-gradient(135deg,#3b82f6,#6366f1);border-radius:8px;display:flex;align-items:center;justify-content:center">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M13 3L4 14h8l-1 7 9-11h-8l1-7z" fill="#fff"/></svg>
+      </div>
+      <span class="font-bold text-base text-gray-900">星桥<span class="text-indigo-600">API</span></span>
+      <span class="text-xs text-gray-400 hide-mobile">企业级 API 中转与聚合平台</span>
+    </div>
+
+    <!-- 菜单 -->
+    <div class="flex items-center gap-1 hide-mobile">
+      <a href="#" class="px-3 py-1.5 text-sm rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition" @click.prevent="goto('home')">首页</a>
+      <a href="#" class="px-3 py-1.5 text-sm rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition" @click.prevent="token?goto('dashboard'):goto('login')">控制台</a>
+      <a href="#models" class="px-3 py-1.5 text-sm rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition">模型广场</a>
+      <a href="#pricing" class="px-3 py-1.5 text-sm rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition">定价</a>
+    </div>
+
+    <!-- 右侧操作 -->
     <div class="flex items-center gap-2">
       <template x-if="!token">
-        <div class="flex gap-2">
-          <span class="nav-link text-sm" @click="page='login'">登录</span>
-          <span class="nav-link text-sm btn-primary px-4 py-2 rounded-lg" @click="page='register'">免费注册</span>
+        <div class="flex items-center gap-2">
+          <button class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 transition" @click="goto('login')">登录</button>
+          <button class="btn-primary px-4 py-1.5 text-sm rounded-lg font-medium" @click="goto('register')">免费注册</button>
         </div>
       </template>
       <template x-if="token">
-        <div class="flex gap-3 items-center">
-          <span class="nav-link text-sm" @click="token ? (page='dashboard', loadDashboard()) : (page='login')">控制台</span>
-          <span class="nav-link text-sm" @click="page='recharge'">充值</span>
-          <span class="nav-link text-sm text-slate-400" @click="logout()">退出</span>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-gray-500" x-text="user.email"></span>
+          <button class="btn-primary px-3 py-1.5 text-sm rounded-lg" @click="goto('dashboard')">控制台</button>
+          <button class="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700" @click="logout()">退出</button>
         </div>
       </template>
     </div>
   </div>
 </nav>
 
-<!-- 首页 -->
-<div x-show="page==='home'" class="pt-20">
+<!-- ═══════════════ 首页 ═══════════════ -->
+<div x-show="page==='home'">
+
   <!-- Hero -->
-  <section class="max-w-6xl mx-auto px-6 py-24 text-center">
-    <div class="inline-block mb-4 px-4 py-1 rounded-full text-xs border border-purple-500/30 bg-purple-500/10 text-purple-300">🚀 稳定、快速、易接入</div>
-    <h1 class="text-5xl font-bold mb-6 leading-tight">像用电一样，<span class="gradient-text">用 AI API</span></h1>
-    <p class="text-xl text-slate-400 mb-10 max-w-2xl mx-auto">注册·充值·填Key即用。支持 GPT-4o、Claude、Gemini 等主流模型，完全兼容 OpenAI 接口格式。</p>
-    <div class="flex gap-4 justify-center">
-      <button class="btn-primary px-8 py-3 rounded-xl font-medium text-white" @click="page='register'">免费注册</button>
-      <a href="#pricing" class="px-8 py-3 rounded-xl font-medium border border-white/20 hover:border-white/40 transition">查看定价</a>
+  <section class="grid-bg pt-14 min-h-screen flex flex-col items-center justify-center text-center px-6 pb-20">
+    <!-- 状态标签 -->
+    <div class="flex flex-wrap justify-center gap-2 mb-8 mt-10">
+      <span class="status-pill pill-green"><span class="pulse-dot"></span>服务状态正常</span>
+      <span class="status-pill pill-blue">多线路在线</span>
+      <span class="status-pill pill-blue">支持流式响应</span>
+      <span class="status-pill pill-blue">OpenAPI 协议兼容</span>
     </div>
-    <!-- 代码示例 -->
-    <div class="mt-16 card rounded-2xl p-6 text-left max-w-2xl mx-auto">
-      <div class="flex items-center gap-2 mb-4 text-sm text-slate-400">
-        <span class="w-3 h-3 rounded-full bg-red-500"></span>
-        <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
-        <span class="w-3 h-3 rounded-full bg-green-500"></span>
-        <span class="ml-2">快速接入示例</span>
+
+    <!-- 主标题 -->
+    <div class="mb-3 text-xs font-medium text-indigo-600 tracking-widest uppercase">高可用 · 智能路由 · 可观测 · 生产环境可用</div>
+    <h1 class="hero-title text-5xl font-bold leading-tight text-gray-900 mb-4 max-w-3xl" style="font-size:3rem;line-height:1.2">
+      面向生产环境的<br><span class="gradient-text">企业级 API 中转平台</span>
+    </h1>
+    <p class="text-lg text-gray-500 max-w-2xl mb-8 leading-relaxed">
+      统一接入主流 AI 大模型 / OpenAPI 服务，提供协议兼容、智能路由、流式转发、故障切换、请求监控与用量分析。帮助开发者、团队与企业系统以更低的接入成本构建稳定、可控、可扩展的 API 调用基础设施。
+    </p>
+    <div class="flex gap-3 justify-center">
+      <button class="btn-primary px-6 py-3 rounded-xl font-medium text-base" @click="goto('register')">立即接入</button>
+      <a href="#docs-section" class="px-6 py-3 rounded-xl font-medium text-base border border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition">查看开发文档</a>
+    </div>
+
+    <!-- 四宫格指标 -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl w-full mt-16">
+      <div class="card-flat p-5 text-left">
+        <div class="text-3xl font-bold text-gray-900 mb-1">99.9%</div>
+        <div class="text-sm font-medium text-gray-700">服务可用性目标</div>
+        <div class="text-xs text-gray-400 mt-1">Availability Target</div>
       </div>
-      <pre class="text-sm text-green-400 overflow-x-auto"><code>from openai import OpenAI
-
-client = OpenAI(
-    api_key="sk-你的Key",
-    base_url="https://你的域名/v1"
-)
-
-resp = client.chat.completions.create(
-    model="gpt-4o-mini",
-    messages=[{"role": "user", "content": "你好"}]
-)
-print(resp.choices[0].message.content)</code></pre>
+      <div class="card-flat p-5 text-left">
+        <div class="text-3xl font-bold text-gray-900 mb-1">Multi-Route</div>
+        <div class="text-sm font-medium text-gray-700">智能调度与自动切换</div>
+        <div class="text-xs text-gray-400 mt-1">Smart Routing & Failover</div>
+      </div>
+      <div class="card-flat p-5 text-left">
+        <div class="text-3xl font-bold text-gray-900 mb-1">Realtime</div>
+        <div class="text-sm font-medium text-gray-700">请求监控与状态分析</div>
+        <div class="text-xs text-gray-400 mt-1">Realtime Monitoring</div>
+      </div>
+      <div class="card-flat p-5 text-left">
+        <div class="text-3xl font-bold text-gray-900 mb-1">Compatible</div>
+        <div class="text-sm font-medium text-gray-700">标准 OpenAPI 接入方式</div>
+        <div class="text-xs text-gray-400 mt-1">OpenAPI-Compatible Access</div>
+      </div>
     </div>
   </section>
 
-  <!-- 特性 -->
-  <section class="max-w-6xl mx-auto px-6 py-16">
-    <h2 class="text-3xl font-bold text-center mb-12">为什么选择星桥 API</h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <template x-for="f in features">
-        <div class="card rounded-2xl p-6">
-          <div class="text-3xl mb-4" x-text="f.icon"></div>
-          <h3 class="text-lg font-semibold mb-2" x-text="f.title"></h3>
-          <p class="text-slate-400 text-sm" x-text="f.desc"></p>
+  <!-- 代码演示 + 能力 -->
+  <section class="max-w-6xl mx-auto px-6 py-20">
+    <div class="grid md:grid-cols-2 gap-10 items-center">
+      <!-- 终端 -->
+      <div class="terminal shadow-2xl">
+        <div class="terminal-bar">
+          <span class="dot bg-red-400"></span>
+          <span class="dot bg-yellow-400"></span>
+          <span class="dot bg-green-400"></span>
+          <span class="text-gray-400 text-xs ml-3">Gateway Endpoint / Production Access</span>
+        </div>
+        <div class="p-5 text-sm font-mono leading-relaxed">
+          <div class="text-blue-400">POST <span class="text-white">/v1/chat/completions</span></div>
+          <div class="text-gray-500 mt-1">Host: <span class="text-gray-300" x-text="window.location.host || 'your-domain.com'"></span></div>
+          <div class="text-gray-500">Authorization: <span class="text-green-400">Bearer YOUR_API_KEY</span></div>
+          <div class="mt-4 text-gray-300">{</div>
+          <div class="ml-4 text-yellow-300">"model": <span class="text-green-300">"模型名称"</span>,</div>
+          <div class="ml-4 text-yellow-300">"messages": [</div>
+          <div class="ml-8 text-gray-300">{"role": <span class="text-green-300">"user"</span>, "content": <span class="text-green-300">"Hello"</span>}</div>
+          <div class="ml-4 text-gray-300">],</div>
+          <div class="ml-4 text-yellow-300">"stream": <span class="text-blue-300">true</span></div>
+          <div class="text-gray-300">}</div>
+          <div class="mt-4 border-t border-gray-700 pt-4">
+            <div class="text-green-400">200 OK</div>
+            <div class="text-gray-500">route: <span class="text-gray-300">cn-premium-a</span></div>
+            <div class="text-gray-500">latency: <span class="text-gray-300">287ms</span></div>
+            <div class="text-gray-500">status: <span class="text-green-400">healthy</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 核心能力 -->
+      <div class="space-y-5">
+        <h2 class="text-3xl font-bold text-gray-900">一行代码替换，即刻接入</h2>
+        <p class="text-gray-500">完全兼容 OpenAI SDK，只需修改 <code class="bg-gray-100 px-1.5 py-0.5 rounded text-indigo-600 text-sm">base_url</code>，无需改动任何业务逻辑。</p>
+        <div class="space-y-4">
+          <template x-for="f in features">
+            <div class="flex gap-4">
+              <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 text-lg" style="background:linear-gradient(135deg,#eff6ff,#eef2ff)" x-text="f.icon"></div>
+              <div>
+                <div class="font-medium text-gray-900 text-sm" x-text="f.title"></div>
+                <div class="text-gray-500 text-sm mt-0.5" x-text="f.desc"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 接入步骤 -->
+  <section id="docs-section" class="bg-gray-50 py-20 px-6">
+    <div class="max-w-4xl mx-auto text-center mb-12">
+      <h2 class="text-3xl font-bold text-gray-900 mb-3">三步极速接入</h2>
+      <p class="text-gray-500">从注册到调用，最快 5 分钟完成接入</p>
+    </div>
+    <div class="max-w-4xl mx-auto grid md:grid-cols-3 gap-6">
+      <template x-for="(s, i) in steps">
+        <div class="card p-6">
+          <div class="step-num mb-4" x-text="i+1"></div>
+          <h3 class="font-semibold text-gray-900 mb-2" x-text="s.title"></h3>
+          <p class="text-sm text-gray-500" x-text="s.desc"></p>
         </div>
       </template>
+    </div>
+  </section>
+
+  <!-- 平台状态 -->
+  <section class="max-w-4xl mx-auto px-6 py-20">
+    <h2 class="text-2xl font-bold text-gray-900 mb-8">平台状态概览</h2>
+    <div class="card-flat divide-y divide-gray-100">
+      <template x-for="s in statuses">
+        <div class="flex items-center justify-between px-6 py-4">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm" :style="'background:'+s.bg" x-text="s.icon"></div>
+            <div>
+              <div class="text-sm font-medium text-gray-900" x-text="s.name"></div>
+              <div class="text-xs text-gray-400" x-text="s.sub"></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold" :class="s.ok?'text-green-600':'text-red-500'" x-text="s.value"></span>
+            <div class="w-2 h-2 rounded-full" :class="s.ok?'bg-green-500':'bg-red-400'"></div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </section>
+
+  <!-- 模型广场 -->
+  <section id="models" class="bg-gray-50 py-20 px-6">
+    <div class="max-w-6xl mx-auto">
+      <div class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-1">模型广场</h2>
+        <p class="text-sm text-gray-500">查看所有可用的AI模型供应商，包括众多知名供应商的模型</p>
+      </div>
+      <div class="flex gap-6">
+        <!-- 侧边筛选 -->
+        <div class="w-44 flex-shrink-0">
+          <div class="text-xs text-gray-400 font-medium mb-2 uppercase tracking-wide">供应商</div>
+          <div class="space-y-1">
+            <template x-for="v in vendors">
+              <div class="flex items-center justify-between px-3 py-1.5 rounded-lg cursor-pointer text-sm transition"
+                   :class="activeVendor===v.key?'bg-white shadow-sm font-medium text-gray-900':'text-gray-500 hover:text-gray-700 hover:bg-white'"
+                   @click="activeVendor=v.key">
+                <span x-text="v.name"></span>
+                <span class="text-xs text-gray-400" x-text="v.count"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+        <!-- 模型卡片 -->
+        <div class="flex-1">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <template x-for="m in filteredModels" :key="m.id">
+              <div class="card p-4 cursor-default">
+                <div class="flex items-start justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <span class="text-lg" x-text="m.icon"></span>
+                    <div>
+                      <div class="text-sm font-medium text-gray-900 truncate max-w-[120px]" x-text="m.name"></div>
+                      <div class="flex gap-1 mt-0.5">
+                        <template x-for="tag in m.tags">
+                          <span class="model-tag text-indigo-600 bg-indigo-50" x-text="tag"></span>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="border-t border-gray-100 pt-2 mt-2">
+                  <div class="flex justify-between text-xs text-gray-500">
+                    <span>输入价格</span>
+                    <span class="font-medium text-gray-900" x-text="m.input"></span>
+                  </div>
+                  <div class="flex justify-between text-xs text-gray-500 mt-0.5">
+                    <span>补全价格</span>
+                    <span class="font-medium text-gray-900" x-text="m.output"></span>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
   <!-- 定价 -->
-  <section id="pricing" class="max-w-6xl mx-auto px-6 py-16">
-    <h2 class="text-3xl font-bold text-center mb-4">透明定价</h2>
-    <p class="text-center text-slate-400 mb-12">按实际使用量计费，无月费，无最低消费</p>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+  <section id="pricing" class="max-w-5xl mx-auto px-6 py-20">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl font-bold text-gray-900 mb-3">透明定价，按量计费</h2>
+      <p class="text-gray-500">无月费，无最低消费，用多少扣多少</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6">
       <template x-for="p in plans">
-        <div class="card rounded-2xl p-6 text-center" :class="p.hot?'border-purple-500/50':''">
-          <template x-if="p.hot"><div class="text-xs text-purple-300 mb-2 bg-purple-500/20 rounded-full px-3 py-1 inline-block">最受欢迎</div></template>
-          <h3 class="text-xl font-bold mb-2" x-text="p.name"></h3>
-          <div class="text-4xl font-bold gradient-text mb-1" x-text="p.price"></div>
-          <div class="text-slate-400 text-sm mb-6" x-text="p.unit"></div>
-          <ul class="text-sm text-left space-y-2">
+        <div class="card p-6" :class="p.hot?'border-indigo-400 shadow-lg shadow-indigo-100':''">
+          <template x-if="p.hot">
+            <div class="inline-block text-xs px-3 py-0.5 rounded-full bg-indigo-600 text-white mb-3">最受欢迎</div>
+          </template>
+          <h3 class="text-lg font-bold text-gray-900 mb-1" x-text="p.name"></h3>
+          <div class="flex items-end gap-1 mb-4">
+            <span class="text-4xl font-bold" :class="p.hot?'gradient-text':'text-gray-900'" x-text="p.price"></span>
+            <span class="text-gray-400 text-sm mb-1" x-text="p.unit"></span>
+          </div>
+          <ul class="space-y-2 mb-6">
             <template x-for="item in p.features">
-              <li class="flex items-center gap-2"><span class="text-green-400">✓</span><span x-text="item"></span></li>
+              <li class="flex items-center gap-2 text-sm text-gray-600">
+                <svg class="w-4 h-4 text-indigo-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span x-text="item"></span>
+              </li>
             </template>
           </ul>
-          <button class="btn-primary w-full mt-6 py-2 rounded-xl text-white" @click="page='register'">立即开始</button>
+          <button class="w-full py-2.5 rounded-xl text-sm font-medium transition"
+            :class="p.hot?'btn-primary':'border border-gray-300 text-gray-700 hover:border-indigo-400 hover:text-indigo-600'"
+            @click="goto('register')" x-text="p.hot?'立即开始':'选择套餐'"></button>
         </div>
-      </template>
-    </div>
-  </section>
-
-  <!-- 支持模型 -->
-  <section class="max-w-6xl mx-auto px-6 py-16">
-    <h2 class="text-3xl font-bold text-center mb-12">支持的模型</h2>
-    <div class="flex flex-wrap gap-3 justify-center">
-      <template x-for="m in models">
-        <span class="card px-4 py-2 rounded-full text-sm" x-text="m"></span>
       </template>
     </div>
   </section>
 
   <!-- Footer -->
-  <footer class="border-t border-white/10 py-10 text-center text-slate-500 text-sm">
-    <p>⚡ 星桥 API — 国内开发者的 AI API 首选中转平台</p>
-    <p class="mt-2">客服微信：请在管理后台查看 · 响应时间：工作日 9:00-22:00</p>
+  <footer class="border-t border-gray-100 py-10 px-6">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2">
+        <div style="width:24px;height:24px;background:linear-gradient(135deg,#3b82f6,#6366f1);border-radius:6px"></div>
+        <span class="font-semibold text-gray-700">星桥API</span>
+        <span class="text-gray-400 text-sm">© 2026 版权所有</span>
+      </div>
+      <div class="text-sm text-gray-400">客服响应：工作日 9:00–22:00 · 服务状态实时可查</div>
+    </div>
   </footer>
 </div>
 
-<!-- 登录 -->
-<div x-show="page==='login'" class="pt-28 min-h-screen flex items-start justify-center px-4">
-  <div class="card rounded-2xl p-8 w-full max-w-md">
-    <h2 class="text-2xl font-bold mb-6 text-center">登录账户</h2>
-    <div class="space-y-4">
-      <div><label class="text-sm text-slate-400 mb-1 block">邮箱</label><input x-model="loginForm.email" type="email" placeholder="your@email.com"></div>
-      <div><label class="text-sm text-slate-400 mb-1 block">密码</label><input x-model="loginForm.password" type="password" placeholder="••••••••" @keydown.enter="doLogin()"></div>
-      <button class="btn-primary w-full py-3 rounded-xl text-white font-medium" @click="doLogin()" :disabled="loading" x-text="loading?'登录中...':'登录'"></button>
+<!-- ═══════════════ 登录 ═══════════════ -->
+<div x-show="page==='login'" class="min-h-screen grid-bg flex items-center justify-center px-4 pt-14">
+  <div class="bg-white border border-gray-200 rounded-2xl p-8 w-full max-w-sm shadow-xl shadow-gray-100">
+    <div class="text-center mb-6">
+      <div class="w-10 h-10 rounded-xl mx-auto mb-3" style="background:linear-gradient(135deg,#3b82f6,#6366f1)"></div>
+      <h2 class="text-xl font-bold text-gray-900">登录账户</h2>
     </div>
-    <p class="text-center mt-4 text-sm text-slate-400">还没有账户？<span class="text-purple-400 cursor-pointer" @click="page='register'">免费注册</span></p>
+    <div class="space-y-3">
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">邮箱地址</label>
+        <input class="inp" x-model="lf.email" type="email" placeholder="your@email.com">
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">密码</label>
+        <input class="inp" x-model="lf.password" type="password" placeholder="••••••••" @keydown.enter="doLogin()">
+      </div>
+      <button class="btn-primary w-full py-2.5 rounded-xl font-medium" @click="doLogin()" :disabled="loading" x-text="loading?'登录中...':'登录'"></button>
+    </div>
+    <p class="text-center mt-4 text-sm text-gray-500">还没有账户？<span class="text-indigo-600 cursor-pointer font-medium" @click="goto('register')">免费注册</span></p>
   </div>
 </div>
 
-<!-- 注册 -->
-<div x-show="page==='register'" class="pt-28 min-h-screen flex items-start justify-center px-4">
-  <div class="card rounded-2xl p-8 w-full max-w-md">
-    <h2 class="text-2xl font-bold mb-6 text-center">创建账户</h2>
-    <div class="space-y-4">
-      <div><label class="text-sm text-slate-400 mb-1 block">邮箱</label><input x-model="regForm.email" type="email" placeholder="your@email.com"></div>
-      <div><label class="text-sm text-slate-400 mb-1 block">密码</label><input x-model="regForm.password" type="password" placeholder="至少6位"></div>
-      <button class="btn-primary w-full py-3 rounded-xl text-white font-medium" @click="doRegister()" :disabled="loading" x-text="loading?'注册中...':'免费注册'"></button>
+<!-- ═══════════════ 注册 ═══════════════ -->
+<div x-show="page==='register'" class="min-h-screen grid-bg flex items-center justify-center px-4 pt-14">
+  <div class="bg-white border border-gray-200 rounded-2xl p-8 w-full max-w-sm shadow-xl shadow-gray-100">
+    <div class="text-center mb-6">
+      <div class="w-10 h-10 rounded-xl mx-auto mb-3" style="background:linear-gradient(135deg,#3b82f6,#6366f1)"></div>
+      <h2 class="text-xl font-bold text-gray-900">创建账户</h2>
+      <p class="text-sm text-gray-400 mt-1">免费注册，即刻开始</p>
     </div>
-    <p class="text-center mt-4 text-sm text-slate-400">已有账户？<span class="text-purple-400 cursor-pointer" @click="page='login'">立即登录</span></p>
+    <div class="space-y-3">
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">邮箱地址</label>
+        <input class="inp" x-model="rf.email" type="email" placeholder="your@email.com">
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">设置密码</label>
+        <input class="inp" x-model="rf.password" type="password" placeholder="至少 6 位">
+      </div>
+      <button class="btn-primary w-full py-2.5 rounded-xl font-medium" @click="doRegister()" :disabled="loading" x-text="loading?'注册中...':'免费注册'"></button>
+    </div>
+    <p class="text-center mt-4 text-sm text-gray-500">已有账户？<span class="text-indigo-600 cursor-pointer font-medium" @click="goto('login')">立即登录</span></p>
   </div>
 </div>
 
-<!-- 控制台 -->
-<div x-show="page==='dashboard'" class="pt-20 max-w-6xl mx-auto px-6 py-8">
-  <div class="flex gap-2 mb-8 border-b border-white/10 pb-4">
-    <button class="tab-btn text-sm" :class="tab==='tokens'?'active':''" @click="tab='tokens'; loadTokens()">我的令牌</button>
-    <button class="tab-btn text-sm" :class="tab==='orders'?'active':''" @click="tab='orders'; loadOrders()">充值记录</button>
-    <button class="tab-btn text-sm" :class="tab==='docs'?'active':''" @click="tab='docs'">接入文档</button>
-  </div>
-
-  <!-- 余额卡片 -->
-  <div class="card rounded-2xl p-6 mb-6 flex items-center justify-between">
-    <div>
-      <div class="text-sm text-slate-400 mb-1">账户余额</div>
-      <div class="text-3xl font-bold gradient-text">¥ <span x-text="user.balance?.toFixed(4)||'0.0000'"></span></div>
+<!-- ═══════════════ 控制台 ═══════════════ -->
+<div x-show="page==='dashboard'" class="pt-14 min-h-screen bg-gray-50">
+  <div class="max-w-5xl mx-auto px-6 py-8">
+    <!-- 顶部信息 -->
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-xl font-bold text-gray-900">控制台</h1>
+        <p class="text-sm text-gray-400 mt-0.5" x-text="user.email"></p>
+      </div>
+      <button class="btn-primary px-4 py-2 rounded-lg text-sm font-medium" @click="goto('recharge')">充值余额</button>
     </div>
-    <button class="btn-primary px-6 py-2 rounded-xl text-white text-sm" @click="page='recharge'">立即充值</button>
-  </div>
 
-  <!-- 令牌列表 -->
-  <div x-show="tab==='tokens'">
-    <div class="flex justify-between items-center mb-4">
-      <h3 class="font-semibold">API 令牌</h3>
-      <button class="btn-primary px-4 py-2 rounded-lg text-sm text-white" @click="showCreate=true">+ 新建令牌</button>
-    </div>
-    <!-- 新建表单 -->
-    <div x-show="showCreate" class="card rounded-xl p-4 mb-4">
-      <input x-model="newTokenName" placeholder="令牌名称（如：我的应用）" class="mb-3">
-      <div class="flex gap-2">
-        <button class="btn-primary px-4 py-2 rounded-lg text-sm text-white" @click="createToken()">创建</button>
-        <button class="px-4 py-2 rounded-lg text-sm border border-white/20" @click="showCreate=false">取消</button>
+    <!-- 余额卡片 -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="card p-4 col-span-2">
+        <div class="text-xs text-gray-400 mb-1">账户余额</div>
+        <div class="text-3xl font-bold gradient-text">¥ <span x-text="(user.balance||0).toFixed(4)"></span></div>
+        <div class="text-xs text-gray-400 mt-1">可用于调用所有模型</div>
+      </div>
+      <div class="card p-4">
+        <div class="text-xs text-gray-400 mb-1">令牌数量</div>
+        <div class="text-2xl font-bold text-gray-900" x-text="tokens.length"></div>
+        <div class="text-xs text-gray-400 mt-1">API Key</div>
+      </div>
+      <div class="card p-4">
+        <div class="text-xs text-gray-400 mb-1">今日消耗</div>
+        <div class="text-2xl font-bold text-gray-900">¥<span x-text="todayUsed.toFixed(4)"></span></div>
+        <div class="text-xs text-gray-400 mt-1">累计消耗</div>
       </div>
     </div>
-    <template x-if="tokens.length===0">
-      <div class="text-center text-slate-400 py-12">还没有令牌，点击「新建令牌」创建</div>
-    </template>
-    <div class="space-y-3">
-      <template x-for="t in tokens" :key="t.id">
-        <div class="card rounded-xl p-4">
-          <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-3">
-              <span class="font-medium" x-text="t.name"></span>
-              <span class="text-xs px-2 py-0.5 rounded-full" :class="t.is_active?'bg-green-500/20 text-green-400':'bg-red-500/20 text-red-400'" x-text="t.is_active?'正常':'停用'"></span>
+
+    <!-- 选项卡 -->
+    <div class="bg-gray-200 rounded-xl p-1 flex gap-1 mb-6 w-fit">
+      <button class="px-4 py-1.5 text-sm rounded-lg transition font-medium" :class="tab==='tokens'?'tab-active':'tab-inactive'" @click="tab='tokens'; loadTokens()">API 令牌</button>
+      <button class="px-4 py-1.5 text-sm rounded-lg transition font-medium" :class="tab==='orders'?'tab-active':'tab-inactive'" @click="tab='orders'; loadOrders()">充值记录</button>
+      <button class="px-4 py-1.5 text-sm rounded-lg transition font-medium" :class="tab==='docs'?'tab-active':'tab-inactive'" @click="tab='docs'">接入文档</button>
+    </div>
+
+    <!-- 令牌列表 -->
+    <div x-show="tab==='tokens'">
+      <div class="flex justify-between items-center mb-3">
+        <span class="text-sm text-gray-500">共 <span x-text="tokens.length"></span> 个令牌</span>
+        <button class="btn-primary px-4 py-2 rounded-lg text-sm font-medium" @click="showCreate=!showCreate">+ 新建令牌</button>
+      </div>
+      <div x-show="showCreate" class="card p-4 mb-3">
+        <div class="flex gap-3">
+          <input class="inp" x-model="newName" placeholder="令牌名称（如：我的应用）">
+          <button class="btn-primary px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap" @click="createToken()">创建</button>
+          <button class="px-3 py-2 rounded-lg text-sm border border-gray-200 text-gray-500 hover:bg-gray-50" @click="showCreate=false">取消</button>
+        </div>
+      </div>
+      <template x-if="tokens.length===0">
+        <div class="card p-12 text-center text-gray-400 text-sm">暂无令牌，点击「新建令牌」创建</div>
+      </template>
+      <div class="space-y-3">
+        <template x-for="t in tokens" :key="t.id">
+          <div class="card p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-3">
+                <span class="font-medium text-gray-900 text-sm" x-text="t.name"></span>
+                <span class="text-xs px-2 py-0.5 rounded-full font-medium" :class="t.is_active?'bg-green-50 text-green-700':'bg-red-50 text-red-600'" x-text="t.is_active?'正常':'停用'"></span>
+              </div>
+              <button class="text-xs text-red-400 hover:text-red-600 transition" @click="deleteToken(t.id)">删除</button>
             </div>
-            <button class="text-red-400 text-xs hover:text-red-300" @click="deleteToken(t.id)">删除</button>
+            <div class="flex items-center gap-2 mb-3">
+              <code class="text-xs text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg flex-1 truncate font-mono" x-text="t.key"></code>
+              <button class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600 transition" @click="copy(t.key)">复制</button>
+            </div>
+            <div class="grid grid-cols-3 gap-3 text-xs text-gray-400">
+              <div>今日用量：<span class="text-gray-700 font-medium" x-text="'¥'+t.used_today.toFixed(4)"></span></div>
+              <div>累计消耗：<span class="text-gray-700 font-medium" x-text="'¥'+t.total_used.toFixed(4)"></span></div>
+              <div>限速：<span class="text-gray-700 font-medium" x-text="t.rpm_limit?t.rpm_limit+'RPM':'不限'"></span></div>
+            </div>
           </div>
-          <div class="flex items-center gap-2 mb-3">
-            <code class="text-xs text-purple-300 bg-purple-500/10 px-3 py-1 rounded flex-1 truncate" x-text="t.key"></code>
-            <span class="copy-btn" @click="copy(t.key)">复制</span>
-          </div>
-          <div class="grid grid-cols-3 gap-3 text-xs text-slate-400">
-            <div>今日用量：<span class="text-white" x-text="'¥'+t.used_today.toFixed(4)"></span></div>
-            <div>累计消耗：<span class="text-white" x-text="'¥'+t.total_used.toFixed(4)"></span></div>
-            <div>限速：<span class="text-white" x-text="t.rpm_limit?t.rpm_limit+'RPM':'不限'"></span></div>
-          </div>
-        </div>
-      </template>
-    </div>
-  </div>
-
-  <!-- 充值记录 -->
-  <div x-show="tab==='orders'">
-    <h3 class="font-semibold mb-4">充值记录</h3>
-    <template x-if="orders.length===0">
-      <div class="text-center text-slate-400 py-12">暂无充值记录</div>
-    </template>
-    <div class="space-y-3">
-      <template x-for="o in orders" :key="o.id">
-        <div class="card rounded-xl p-4 flex items-center justify-between">
-          <div>
-            <div class="text-sm font-medium" x-text="payMethodName(o.pay_method)+' ¥'+o.amount"></div>
-            <div class="text-xs text-slate-400 mt-1" x-text="'到账 ¥'+o.credits+' · '+new Date(o.created_at).toLocaleString()"></div>
-          </div>
-          <span class="text-xs px-3 py-1 rounded-full" :class="{
-            'bg-yellow-500/20 text-yellow-400': o.status==='pending',
-            'bg-green-500/20 text-green-400': o.status==='approved',
-            'bg-red-500/20 text-red-400': o.status==='rejected'
-          }" x-text="{'pending':'审核中','approved':'已到账','rejected':'已拒绝'}[o.status]"></span>
-        </div>
-      </template>
-    </div>
-  </div>
-
-  <!-- 接入文档 -->
-  <div x-show="tab==='docs'">
-    <h3 class="font-semibold mb-4">快速接入</h3>
-    <div class="card rounded-xl p-6 space-y-4">
-      <div>
-        <div class="text-sm text-slate-400 mb-2">API 地址（Base URL）</div>
-        <div class="flex items-center gap-2">
-          <code class="text-sm text-purple-300 bg-purple-500/10 px-3 py-2 rounded flex-1" x-text="apiBase+'/v1'"></code>
-          <span class="copy-btn" @click="copy(apiBase+'/v1')">复制</span>
-        </div>
+        </template>
       </div>
-      <div>
-        <div class="text-sm text-slate-400 mb-2">Python 示例</div>
-        <pre class="text-sm text-green-400 bg-black/30 rounded-xl p-4 overflow-x-auto"><code>from openai import OpenAI
+    </div>
+
+    <!-- 充值记录 -->
+    <div x-show="tab==='orders'">
+      <template x-if="orders.length===0">
+        <div class="card p-12 text-center text-gray-400 text-sm">暂无充值记录</div>
+      </template>
+      <div class="space-y-3">
+        <template x-for="o in orders" :key="o.id">
+          <div class="card p-4 flex items-center justify-between">
+            <div>
+              <div class="text-sm font-medium text-gray-900" x-text="payName(o.pay_method)+' — ¥'+o.amount"></div>
+              <div class="text-xs text-gray-400 mt-1" x-text="'到账 ¥'+o.credits+' · '+new Date(o.created_at).toLocaleString()"></div>
+            </div>
+            <span class="text-xs px-2.5 py-1 rounded-full font-medium"
+              :class="{'bg-yellow-50 text-yellow-700':o.status==='pending','bg-green-50 text-green-700':o.status==='approved','bg-red-50 text-red-600':o.status==='rejected'}"
+              x-text="{'pending':'审核中','approved':'已到账','rejected':'已拒绝'}[o.status]"></span>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- 接入文档 -->
+    <div x-show="tab==='docs'">
+      <div class="card p-6 space-y-5">
+        <div>
+          <div class="text-xs text-gray-400 mb-1.5 font-medium uppercase tracking-wide">API Base URL</div>
+          <div class="flex items-center gap-2">
+            <code class="text-sm text-indigo-600 bg-indigo-50 px-3 py-2 rounded-lg flex-1 font-mono" x-text="origin+'/v1'"></code>
+            <button class="text-xs px-3 py-2 rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600 transition" @click="copy(origin+'/v1')">复制</button>
+          </div>
+        </div>
+        <div>
+          <div class="text-xs text-gray-400 mb-2 font-medium uppercase tracking-wide">Python 示例</div>
+          <div class="terminal rounded-xl">
+            <div class="terminal-bar">
+              <span class="dot bg-red-400"></span><span class="dot bg-yellow-400"></span><span class="dot bg-green-400"></span>
+              <span class="text-gray-400 text-xs ml-2">Python · OpenAI SDK</span>
+            </div>
+            <pre class="p-4 text-sm font-mono text-green-400 overflow-x-auto"><code>from openai import OpenAI
 
 client = OpenAI(
     api_key="sk-你的令牌Key",
-    base_url="<span x-text="apiBase"></span>/v1"
+    base_url="<span x-text="origin"></span>/v1"
 )
 
 response = client.chat.completions.create(
@@ -273,90 +535,135 @@ response = client.chat.completions.create(
     messages=[{"role": "user", "content": "你好"}]
 )
 print(response.choices[0].message.content)</code></pre>
-      </div>
-      <div>
-        <div class="text-sm text-slate-400 mb-2">支持的接口</div>
-        <ul class="text-sm space-y-1 text-slate-300">
-          <li>✓ POST /v1/chat/completions（支持流式）</li>
-          <li>✓ POST /v1/embeddings</li>
-          <li>✓ GET /v1/models</li>
-        </ul>
+          </div>
+        </div>
+        <div>
+          <div class="text-xs text-gray-400 mb-2 font-medium uppercase tracking-wide">支持的接口</div>
+          <div class="space-y-1.5 text-sm text-gray-600">
+            <div class="flex items-center gap-2"><svg class="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> POST /v1/chat/completions（支持流式 SSE）</div>
+            <div class="flex items-center gap-2"><svg class="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> POST /v1/embeddings</div>
+            <div class="flex items-center gap-2"><svg class="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> GET /v1/models</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- 充值页 -->
-<div x-show="page==='recharge'" class="pt-28 max-w-xl mx-auto px-4">
-  <h2 class="text-2xl font-bold mb-6">充值账户</h2>
-  <div class="card rounded-2xl p-6 space-y-5">
-    <div>
-      <label class="text-sm text-slate-400 mb-2 block">选择充值方式</label>
-      <div class="grid grid-cols-2 gap-3">
-        <template x-for="m in payMethods">
-          <div class="card rounded-xl p-3 text-center cursor-pointer transition" :class="rechargeForm.pay_method===m.key?'border-purple-500 bg-purple-500/10':''" @click="rechargeForm.pay_method=m.key">
-            <div class="text-2xl mb-1" x-text="m.icon"></div>
-            <div class="text-sm" x-text="m.name"></div>
+<!-- ═══════════════ 充值 ═══════════════ -->
+<div x-show="page==='recharge'" class="pt-14 min-h-screen bg-gray-50">
+  <div class="max-w-xl mx-auto px-6 py-8">
+    <div class="flex items-center gap-3 mb-6">
+      <button class="text-gray-400 hover:text-gray-600 transition" @click="goto('dashboard')">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <h1 class="text-xl font-bold text-gray-900">充值账户</h1>
+    </div>
+    <div class="card p-6 space-y-5">
+      <!-- 支付方式 -->
+      <div>
+        <label class="text-sm font-medium text-gray-700 mb-3 block">选择支付方式</label>
+        <div class="grid grid-cols-3 gap-2">
+          <template x-for="m in payMethods">
+            <div class="border rounded-xl p-3 text-center cursor-pointer transition"
+              :class="rcf.pay_method===m.key?'border-indigo-400 bg-indigo-50':'border-gray-200 hover:border-gray-300'"
+              @click="rcf.pay_method=m.key">
+              <div class="text-xl mb-1" x-text="m.icon"></div>
+              <div class="text-xs font-medium text-gray-700" x-text="m.name"></div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- 收款信息 -->
+      <template x-if="rcf.pay_method">
+        <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center">
+          <div class="text-sm text-gray-500 mb-3" x-text="qrTip()"></div>
+          <div class="w-32 h-32 mx-auto bg-white border border-gray-200 rounded-xl flex items-center justify-center text-xs text-gray-400">
+            收款码<br>请上传
           </div>
-        </template>
-      </div>
-    </div>
+          <p class="text-xs text-gray-400 mt-2">转账备注你的邮箱，方便核对</p>
+        </div>
+      </template>
 
-    <!-- 收款码展示 -->
-    <template x-if="rechargeForm.pay_method">
-      <div class="card rounded-xl p-4 text-center">
-        <div class="text-sm text-slate-400 mb-3" x-text="payQRTip()"></div>
-        <div class="w-40 h-40 mx-auto bg-white/10 rounded-xl flex items-center justify-center text-slate-500 text-sm">收款码占位<br>请在管理后台上传</div>
-        <p class="text-xs text-slate-400 mt-3">转账时备注你的邮箱，方便核对</p>
+      <!-- 金额 -->
+      <div>
+        <label class="text-sm font-medium text-gray-700 mb-1 block" x-text="isForeign()?'付款金额（美元 USD）':'付款金额（人民币 CNY）'"></label>
+        <input class="inp" x-model="rcf.amount" type="number" min="1" step="1" placeholder="请输入金额">
+        <p class="text-xs text-indigo-600 mt-1.5" x-show="rcf.amount>0" x-text="creditsHint()"></p>
       </div>
-    </template>
 
-    <div>
-      <label class="text-sm text-slate-400 mb-1 block" x-text="rechargeForm.pay_method==='usdt'||rechargeForm.pay_method==='lianlian'||rechargeForm.pay_method==='pingpong'?'付款金额（美元）':'付款金额（人民币）'"></label>
-      <input x-model="rechargeForm.amount" type="number" min="1" step="1" placeholder="请输入金额">
-      <p class="text-xs text-slate-400 mt-1" x-show="rechargeForm.amount>0" x-text="calcCredits()"></p>
+      <div>
+        <label class="text-sm font-medium text-gray-700 mb-1 block">备注（可选）</label>
+        <textarea class="inp" style="resize:none" x-model="rcf.remark" rows="2" placeholder="如：已支付宝转账，截图已发微信"></textarea>
+      </div>
+
+      <button class="btn-primary w-full py-3 rounded-xl font-medium" @click="submitRecharge()" :disabled="loading" x-text="loading?'提交中...':'提交充值申请'"></button>
+      <p class="text-xs text-gray-400 text-center">提交后平台核实到账，通常 1 小时内完成审核</p>
     </div>
-    <div>
-      <label class="text-sm text-slate-400 mb-1 block">备注（可选，填写转账截图说明）</label>
-      <textarea x-model="rechargeForm.remark" rows="2" placeholder="如：已通过支付宝转账，订单号 xxx"></textarea>
-    </div>
-    <button class="btn-primary w-full py-3 rounded-xl text-white font-medium" @click="submitRecharge()" :disabled="loading" x-text="loading?'提交中...':'提交充值申请'"></button>
-    <p class="text-xs text-slate-400 text-center">提交后平台将核实到账情况，自动审核通常在1小时内完成</p>
   </div>
 </div>
 
 <script>
-const API = '';  // 同域
 function app() {
   return {
-    page: 'home',
+    page: localStorage.getItem('_page')||'home',
     tab: 'tokens',
-    token: localStorage.getItem('_token') || '',
-    user: {},
-    tokens: [],
-    orders: [],
+    token: localStorage.getItem('_token')||'',
+    user: JSON.parse(localStorage.getItem('_user')||'{}'),
+    tokens: [], orders: [],
     loading: false,
     showCreate: false,
-    newTokenName: '',
-    loginForm: {email:'', password:''},
-    regForm: {email:'', password:''},
-    rechargeForm: {amount:'', pay_method:'wechat', remark:''},
-    toast: {show:false, msg:'', type:'ok'},
-    apiBase: window.location.origin,
+    newName: '',
+    lf: {email:'', password:''},
+    rf: {email:'', password:''},
+    rcf: {amount:'', pay_method:'wechat', remark:''},
+    toast: {show:false, msg:'', ok:true},
+    activeVendor: 'all',
+    origin: window.location.origin,
+
     features: [
-      {icon:'🚀', title:'极速接入', desc:'兼容 OpenAI SDK，改一行 base_url 即可迁移，无需改代码逻辑'},
-      {icon:'💰', title:'按量计费', desc:'无月费，无最低消费，实际使用多少扣多少'},
-      {icon:'🛡', title:'稳定可靠', desc:'多线路智能路由，上游故障自动切换，保障服务可用性'},
-      {icon:'🌍', title:'主流模型', desc:'GPT-4o、Claude 3.5、Gemini 1.5 Pro 等主流模型均已支持'},
-      {icon:'📊', title:'用量可视', desc:'实时查看每个 Key 的用量、消耗、请求记录'},
-      {icon:'🔑', title:'多Key管理', desc:'创建多个 API Key，灵活分配给不同项目或应用'},
+      {icon:'⚡', title:'毫秒级路由切换', desc:'多线路实时监控，上游故障自动切换，SLA 保障不中断'},
+      {icon:'🔗', title:'完全兼容 OpenAI', desc:'支持所有 OpenAI SDK，无需改代码，修改 base_url 即完成迁移'},
+      {icon:'📊', title:'实时用量监控', desc:'每个 Key 的请求数、Token 消耗、费用一目了然'},
+      {icon:'🛡', title:'密钥安全隔离', desc:'分发子 Key 给项目使用，泄露只需删除该 Key 即可'},
     ],
-    plans: [
-      {name:'入门', price:'¥1', unit:'起充', hot:false, features:['按量计费','支持所有模型','7天余额有效期','邮件支持']},
-      {name:'标准', price:'¥50', unit:'推荐充值额', hot:true, features:['按量计费','支持所有模型','180天余额有效期','优先客服支持','专属技术支持']},
-      {name:'企业', price:'¥500+', unit:'大额优惠', hot:false, features:['按量计费+折扣','支持所有模型','365天余额有效期','专属客户经理','SLA 保障']},
+
+    steps: [
+      {title:'注册账户', desc:'使用邮箱免费注册，无需实名，30秒完成'},
+      {title:'充值额度', desc:'支持微信、支付宝、连连国际、PingPong、USDT 多种方式'},
+      {title:'替换 base_url', desc:'创建 API Key，将 base_url 替换为本平台地址，立即可用'},
     ],
-    models: ['gpt-4o','gpt-4o-mini','gpt-3.5-turbo','claude-3-5-sonnet','claude-3-5-haiku','gemini-1.5-pro','gemini-1.5-flash','deepseek-v3','qwen-max','llama-3.3-70b'],
+
+    statuses: [
+      {icon:'⚡', name:'Gateway Cluster', sub:'主入口网关集群', value:'Healthy', ok:true, bg:'#eff6ff'},
+      {icon:'✅', name:'Success Rate', sub:'近 24 小时请求成功率', value:'99.92%', ok:true, bg:'#f0fdf4'},
+      {icon:'⏱', name:'Avg Latency', sub:'优选线路平均延迟', value:'312ms', ok:true, bg:'#fefce8'},
+      {icon:'🌊', name:'Streaming', sub:'流式响应状态', value:'Enabled', ok:true, bg:'#f0fdf4'},
+    ],
+
+    vendors: [
+      {key:'all', name:'全部供应商', count:10},
+      {key:'openai', name:'OpenAI', count:4},
+      {key:'anthropic', name:'Anthropic', count:2},
+      {key:'google', name:'Google', count:2},
+      {key:'meta', name:'Meta', count:1},
+      {key:'deepseek', name:'DeepSeek', count:1},
+    ],
+
+    modelList: [
+      {id:1, vendor:'openai', icon:'🟢', name:'GPT-4o', tags:['对话','识图'], input:'¥0.175/M', output:'¥0.700/M'},
+      {id:2, vendor:'openai', icon:'🟢', name:'GPT-4o mini', tags:['对话'], input:'¥0.011/M', output:'¥0.042/M'},
+      {id:3, vendor:'openai', icon:'🟢', name:'GPT-3.5 Turbo', tags:['对话'], input:'¥0.007/M', output:'¥0.021/M'},
+      {id:4, vendor:'openai', icon:'🟢', name:'text-embedding-3', tags:['嵌入'], input:'¥0.001/M', output:'—'},
+      {id:5, vendor:'anthropic', icon:'🟠', name:'Claude 3.5 Sonnet', tags:['对话','工具'], input:'¥0.210/M', output:'¥1.050/M'},
+      {id:6, vendor:'anthropic', icon:'🟠', name:'Claude 3.5 Haiku', tags:['对话'], input:'¥0.056/M', output:'¥0.280/M'},
+      {id:7, vendor:'google', icon:'🔵', name:'Gemini 1.5 Pro', tags:['对话','识图'], input:'¥0.049/M', output:'¥0.147/M'},
+      {id:8, vendor:'google', icon:'🔵', name:'Gemini 1.5 Flash', tags:['对话'], input:'¥0.005/M', output:'¥0.016/M'},
+      {id:9, vendor:'meta', icon:'🦙', name:'Llama 3.3 70B', tags:['对话'], input:'¥0.042/M', output:'¥0.042/M'},
+      {id:10, vendor:'deepseek', icon:'🐋', name:'DeepSeek V3', tags:['对话','工具'], input:'¥0.010/M', output:'¥0.028/M'},
+    ],
+
     payMethods: [
       {key:'wechat', icon:'💚', name:'微信支付'},
       {key:'alipay', icon:'💙', name:'支付宝'},
@@ -365,140 +672,154 @@ function app() {
       {key:'usdt', icon:'💵', name:'USDT'},
     ],
 
-    init() {
-      if (this.token) this.loadMe();
+    plans: [
+      {name:'入门体验', price:'¥10', unit:'起充', hot:false, features:['按量计费，无月费','接入所有模型','余额 90 天有效','邮件客服支持']},
+      {name:'标准使用', price:'¥50', unit:'推荐充值', hot:true, features:['按量计费，无月费','接入所有模型','余额 180 天有效','优先客服响应','用量统计面板']},
+      {name:'企业合作', price:'¥500+', unit:'大额立减', hot:false, features:['按量计费+折扣','接入所有模型','余额 365 天有效','专属客户经理','SLA 书面保障']},
+    ],
+
+    get filteredModels() {
+      if (this.activeVendor === 'all') return this.modelList;
+      return this.modelList.filter(m => m.vendor === this.activeVendor);
     },
 
-    showToast(msg, type='ok') {
-      this.toast = {show:true, msg, type};
-      setTimeout(()=>this.toast.show=false, 3000);
+    get todayUsed() {
+      return this.tokens.reduce((s, t) => s + (t.used_today || 0), 0);
+    },
+
+    init() {
+      if (this.token) this.loadMe();
+      // 路由保护
+      if (['dashboard','recharge'].includes(this.page) && !this.token) {
+        this.page = 'home';
+      }
+    },
+
+    goto(p) {
+      if (['dashboard','recharge'].includes(p) && !this.token) { this.page='login'; return; }
+      this.page = p;
+      if (p === 'dashboard') { this.loadMe(); this.loadTokens(); }
+      window.scrollTo(0, 0);
+    },
+
+    showToast(msg, ok=true) {
+      this.toast = {show:true, msg, ok};
+      setTimeout(() => this.toast.show = false, 3000);
     },
 
     async req(method, url, body) {
-      const headers = {'Content-Type':'application/json'};
-      if (this.token) headers['Authorization'] = 'Bearer '+this.token;
-      const r = await fetch(API+url, {method, headers, body: body?JSON.stringify(body):undefined});
+      const h = {'Content-Type':'application/json'};
+      if (this.token) h['Authorization'] = 'Bearer '+this.token;
+      const r = await fetch(url, {method, headers:h, body: body ? JSON.stringify(body) : undefined});
       const d = await r.json();
-      if (!r.ok) throw new Error(d.detail||'请求失败');
+      if (!r.ok) throw new Error(d.detail || '请求失败');
       return d;
+    },
+
+    async loadMe() {
+      try {
+        this.user = await this.req('GET', '/api/user/me');
+        localStorage.setItem('_user', JSON.stringify(this.user));
+      } catch(e) { this.logout(); }
     },
 
     async doLogin() {
       this.loading = true;
       try {
         const fd = new FormData();
-        fd.append('username', this.loginForm.email);
-        fd.append('password', this.loginForm.password);
-        const r = await fetch(API+'/api/auth/login', {method:'POST', body:fd});
+        fd.append('username', this.lf.email);
+        fd.append('password', this.lf.password);
+        const r = await fetch('/api/auth/login', {method:'POST', body:fd});
         const d = await r.json();
         if (!r.ok) throw new Error(d.detail||'登录失败');
         this.token = d.access_token;
         localStorage.setItem('_token', this.token);
         await this.loadMe();
-        this.page = 'dashboard';
-        this.tab = 'tokens';
-        this.loadTokens();
-        this.showToast('登录成功');
-      } catch(e) { this.showToast(e.message,'err'); }
+        this.goto('dashboard');
+        this.showToast('登录成功，欢迎回来');
+      } catch(e) { this.showToast(e.message, false); }
       this.loading = false;
     },
 
     async doRegister() {
+      if (!this.rf.email || !this.rf.password) { this.showToast('请填写邮箱和密码', false); return; }
       this.loading = true;
       try {
-        const d = await this.req('POST', '/api/auth/register', this.regForm);
+        const d = await this.req('POST', '/api/auth/register', this.rf);
         this.token = d.access_token;
         localStorage.setItem('_token', this.token);
         await this.loadMe();
-        this.page = 'dashboard';
-        this.tab = 'tokens';
-        this.showToast('注册成功，欢迎使用！');
-      } catch(e) { this.showToast(e.message,'err'); }
+        this.goto('dashboard');
+        this.showToast('注册成功，欢迎使用星桥 API！');
+      } catch(e) { this.showToast(e.message, false); }
       this.loading = false;
     },
 
     logout() {
-      this.token = '';
+      this.token = ''; this.user = {};
       localStorage.removeItem('_token');
-      this.user = {};
+      localStorage.removeItem('_user');
       this.page = 'home';
     },
 
-    async loadMe() {
-      try { this.user = await this.req('GET', '/api/user/me'); } catch(e){}
-    },
-
-    async loadDashboard() {
-      if (!this.token) { this.page = 'login'; return; }
-      await this.loadMe();
-      this.loadTokens();
-    },
-
     async loadTokens() {
-      try { this.tokens = await this.req('GET', '/api/tokens'); } catch(e){}
+      try { this.tokens = await this.req('GET', '/api/tokens'); } catch(e) {}
     },
 
     async createToken() {
       try {
-        await this.req('POST', '/api/tokens', {name: this.newTokenName||'默认令牌'});
-        this.showCreate = false;
-        this.newTokenName = '';
+        await this.req('POST', '/api/tokens', {name: this.newName||'默认令牌'});
+        this.showCreate = false; this.newName = '';
         this.loadTokens();
         this.showToast('令牌创建成功');
-      } catch(e) { this.showToast(e.message,'err'); }
+      } catch(e) { this.showToast(e.message, false); }
     },
 
     async deleteToken(id) {
-      if (!confirm('确认删除该令牌？')) return;
+      if (!confirm('确认删除该令牌？删除后不可恢复')) return;
       try {
         await this.req('DELETE', '/api/tokens/'+id);
         this.loadTokens();
-        this.showToast('已删除');
-      } catch(e) { this.showToast(e.message,'err'); }
+        this.showToast('令牌已删除');
+      } catch(e) { this.showToast(e.message, false); }
     },
 
     async loadOrders() {
-      try { this.orders = await this.req('GET', '/api/recharge'); } catch(e){}
+      try { this.orders = await this.req('GET', '/api/recharge'); } catch(e) {}
     },
 
     async submitRecharge() {
-      if (!this.rechargeForm.amount || this.rechargeForm.amount <= 0) {
-        this.showToast('请填写充值金额','err'); return;
-      }
+      if (!this.rcf.amount || this.rcf.amount <= 0) { this.showToast('请输入充值金额', false); return; }
       this.loading = true;
       try {
         await this.req('POST', '/api/recharge', {
-          amount: parseFloat(this.rechargeForm.amount),
-          pay_method: this.rechargeForm.pay_method,
-          remark: this.rechargeForm.remark,
+          amount: parseFloat(this.rcf.amount),
+          pay_method: this.rcf.pay_method,
+          remark: this.rcf.remark,
         });
-        this.showToast('充值申请已提交，审核通常在1小时内完成');
-        this.rechargeForm = {amount:'', pay_method:'wechat', remark:''};
-        this.page = 'dashboard';
+        this.showToast('充值申请已提交，平台将在 1 小时内审核');
+        this.rcf = {amount:'', pay_method:'wechat', remark:''};
+        this.goto('dashboard');
         this.tab = 'orders';
         this.loadOrders();
-      } catch(e) { this.showToast(e.message,'err'); }
+      } catch(e) { this.showToast(e.message, false); }
       this.loading = false;
     },
 
-    payQRTip() {
-      const tips = {wechat:'扫码向微信收款码转账',alipay:'扫码向支付宝收款码转账',lianlian:'通过连连国际向以下账户汇款',pingpong:'通过 PingPong 向以下账户汇款',usdt:'发送 USDT(TRC20) 到以下地址'};
-      return tips[this.rechargeForm.pay_method]||'';
+    isForeign() { return ['usdt','lianlian','pingpong'].includes(this.rcf.pay_method); },
+    creditsHint() {
+      const amt = parseFloat(this.rcf.amount)||0;
+      const credits = this.isForeign() ? amt*7 : amt;
+      return `预计到账 ¥${credits.toFixed(2)} 可用额度`;
     },
-
-    calcCredits() {
-      const amt = parseFloat(this.rechargeForm.amount)||0;
-      const m = this.rechargeForm.pay_method;
-      const credits = ['usdt','lianlian','pingpong'].includes(m) ? amt*7 : amt;
-      return `预计到账 ¥${credits.toFixed(2)} 额度`;
+    qrTip() {
+      return {wechat:'扫码向微信收款码转账',alipay:'扫码向支付宝收款码转账',lianlian:'通过连连国际向以下账户汇款',pingpong:'通过 PingPong 向以下账户汇款',usdt:'发送 USDT (TRC20) 到以下地址'}[this.rcf.pay_method]||'';
     },
-
-    payMethodName(m) {
+    payName(m) {
       return {wechat:'微信支付',alipay:'支付宝',lianlian:'连连国际',pingpong:'PingPong',usdt:'USDT'}[m]||m;
     },
-
     copy(text) {
-      navigator.clipboard.writeText(text).then(()=>this.showToast('已复制'));
+      navigator.clipboard.writeText(text).then(() => this.showToast('已复制到剪贴板'));
     },
   }
 }
