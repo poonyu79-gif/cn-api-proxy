@@ -60,7 +60,7 @@
 
   /* 平台状态指示 */
   .pulse-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;position:relative}
-  .pulse-dot::after{content:'';position:absolute;inset:-3px;border-radius:50%;background:#22c55e;opacity:.3;animation:pulse 2s infinite}
+  .pulse-dot::after{content:'';position:absolute;top:-3px;left:-3px;right:-3px;bottom:-3px;border-radius:50%;background:#22c55e;opacity:.3;animation:pulse 2s infinite}
   @keyframes pulse{0%,100%{transform:scale(1);opacity:.3}50%{transform:scale(1.5);opacity:0}}
 
   /* 标签切换 */
@@ -72,6 +72,8 @@
   @media(max-width:768px){
     .hide-mobile{display:none!important}
     .hero-title{font-size:2rem!important}
+    .model-sidebar{display:none!important}
+    .model-grid{grid-template-columns:1fr!important}
   }
 </style>
 </head>
@@ -96,8 +98,8 @@
     <div class="flex items-center gap-1 hide-mobile">
       <a href="#" class="px-3 py-1.5 text-sm rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition" @click.prevent="goto('home')">首页</a>
       <a href="#" class="px-3 py-1.5 text-sm rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition" @click.prevent="token?goto('dashboard'):goto('login')">控制台</a>
-      <a href="#models" class="px-3 py-1.5 text-sm rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition">模型广场</a>
-      <a href="#pricing" class="px-3 py-1.5 text-sm rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition">定价</a>
+      <a href="#" class="px-3 py-1.5 text-sm rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition" @click.prevent="scrollTo('models')">模型广场</a>
+      <a href="#" class="px-3 py-1.5 text-sm rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition" @click.prevent="scrollTo('pricing')">定价</a>
     </div>
 
     <!-- 右侧操作 -->
@@ -268,7 +270,7 @@
       </div>
       <div class="flex gap-6">
         <!-- 侧边筛选 -->
-        <div class="w-44 flex-shrink-0">
+        <div class="model-sidebar w-44 flex-shrink-0">
           <div class="text-xs text-gray-400 font-medium mb-2 uppercase tracking-wide">供应商</div>
           <div class="space-y-1">
             <template x-for="v in vendors">
@@ -283,7 +285,7 @@
         </div>
         <!-- 模型卡片 -->
         <div class="flex-1">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div class="model-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             <template x-for="m in filteredModels" :key="m.id">
               <div class="card p-4 cursor-default">
                 <div class="flex items-start justify-between mb-2">
@@ -435,7 +437,7 @@
       <div class="card p-4">
         <div class="text-xs text-gray-400 mb-1">今日消耗</div>
         <div class="text-2xl font-bold text-gray-900">¥<span x-text="todayUsed.toFixed(4)"></span></div>
-        <div class="text-xs text-gray-400 mt-1">累计消耗</div>
+        <div class="text-xs text-gray-400 mt-1">今日合计</div>
       </div>
     </div>
 
@@ -523,18 +525,7 @@
               <span class="dot bg-red-400"></span><span class="dot bg-yellow-400"></span><span class="dot bg-green-400"></span>
               <span class="text-gray-400 text-xs ml-2">Python · OpenAI SDK</span>
             </div>
-            <pre class="p-4 text-sm font-mono text-green-400 overflow-x-auto"><code>from openai import OpenAI
-
-client = OpenAI(
-    api_key="sk-你的令牌Key",
-    base_url="<span x-text="origin"></span>/v1"
-)
-
-response = client.chat.completions.create(
-    model="gpt-4o-mini",
-    messages=[{"role": "user", "content": "你好"}]
-)
-print(response.choices[0].message.content)</code></pre>
+            <pre class="p-4 text-sm font-mono text-green-400 overflow-x-auto" id="py-code-block"></pre>
           </div>
         </div>
         <div>
@@ -607,7 +598,7 @@ print(response.choices[0].message.content)</code></pre>
 <script>
 function app() {
   return {
-    page: localStorage.getItem('_page')||'home',
+    page: 'home',
     tab: 'tokens',
     token: localStorage.getItem('_token')||'',
     user: JSON.parse(localStorage.getItem('_user')||'{}'),
@@ -689,9 +680,25 @@ function app() {
 
     init() {
       if (this.token) this.loadMe();
-      // 路由保护
-      if (['dashboard','recharge'].includes(this.page) && !this.token) {
+      // 初始化代码块（pre 内不能用 x-text，改为 JS 写入）
+      this.$nextTick(() => {
+        const el = document.getElementById('py-code-block');
+        if (el) el.textContent = `from openai import OpenAI\n\nclient = OpenAI(\n    api_key="sk-你的令牌Key",\n    base_url="${this.origin}/v1"\n)\n\nresponse = client.chat.completions.create(\n    model="gpt-4o-mini",\n    messages=[{"role": "user", "content": "你好"}]\n)\nprint(response.choices[0].message.content)`;
+      });
+    },
+
+    scrollTo(anchor) {
+      if (this.page !== 'home') {
         this.page = 'home';
+        this.$nextTick(() => {
+          setTimeout(() => {
+            const el = document.getElementById(anchor);
+            if (el) el.scrollIntoView({behavior:'smooth'});
+          }, 100);
+        });
+      } else {
+        const el = document.getElementById(anchor);
+        if (el) el.scrollIntoView({behavior:'smooth'});
       }
     },
 
