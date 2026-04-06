@@ -3,12 +3,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from passlib.context import CryptContext
 from app.models.base import init_db, Session
 from app.models.user import User
+from app.core.security import hash_password
 from app.api import auth, user, tokens, recharge, proxy, admin
-
-pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -25,7 +23,7 @@ def _ensure_admin():
         if not u:
             u = User(
                 email=admin_email,
-                hashed_password=pwd.hash(admin_pass),
+                hashed_password=hash_password(admin_pass),
                 is_admin=True,
                 balance=9999999.0,
             )
