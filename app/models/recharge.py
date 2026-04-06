@@ -1,4 +1,6 @@
+from __future__ import annotations
 from datetime import datetime
+from typing import Optional
 from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from app.models.base import Base
@@ -15,4 +17,4 @@ class RechargeOrder(Base):
     status: Mapped[str] = mapped_column(String(16), default="pending")  # pending/approved/rejected
     remark: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
