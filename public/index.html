@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>星桥 API - 像用电一样用AI</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<style>
+  [x-cloak]{display:none}
+  .gradient-text{background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(10px)}
+  body{background:#0f0f1a;color:#e2e8f0;font-family:'PingFang SC','Microsoft YaHei',sans-serif}
+  .btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);transition:opacity .2s}
+  .btn-primary:hover{opacity:.85}
+  .nav-link{cursor:pointer;padding:6px 14px;border-radius:6px;transition:background .2s}
+  .nav-link:hover{background:rgba(255,255,255,0.1)}
+  .tab-btn{padding:8px 20px;border-radius:8px;transition:all .2s;cursor:pointer}
+  .tab-btn.active{background:linear-gradient(135deg,#667eea,#764ba2)}
+  input,select,textarea{background:rgba(255,255,255,0.08)!important;border:1px solid rgba(255,255,255,0.15)!important;color:#e2e8f0!important;border-radius:8px;padding:10px 14px;width:100%;outline:none;transition:border .2s}
+  input:focus,select:focus{border-color:#667eea!important}
+  input::placeholder{color:#94a3b8}
+  select option{background:#1e1e3a;color:#e2e8f0}
+  .toast{position:fixed;top:24px;right:24px;z-index:9999;padding:12px 20px;border-radius:10px;font-size:14px;animation:fadeIn .3s}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+  .copy-btn{cursor:pointer;padding:4px 10px;border-radius:6px;background:rgba(102,126,234,0.3);font-size:12px;transition:background .2s}
+  .copy-btn:hover{background:rgba(102,126,234,0.6)}
+</style>
+</head>
+<body x-data="app()" x-cloak>
+
+<!-- Toast -->
+<div x-show="toast.show" class="toast" :class="toast.type==='ok'?'bg-green-600':'bg-red-600'" x-text="toast.msg"></div>
+
+<!-- 导航 -->
+<nav class="fixed top-0 left-0 right-0 z-50 border-b border-white/10" style="background:rgba(15,15,26,0.95);backdrop-filter:blur(10px)">
+  <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="text-xl font-bold gradient-text cursor-pointer" @click="page='home'">⚡ 星桥 API</div>
+    <div class="flex items-center gap-2">
+      <template x-if="!token">
+        <div class="flex gap-2">
+          <span class="nav-link text-sm" @click="page='login'">登录</span>
+          <span class="nav-link text-sm btn-primary px-4 py-2 rounded-lg" @click="page='register'">免费注册</span>
+        </div>
+      </template>
+      <template x-if="token">
+        <div class="flex gap-3 items-center">
+          <span class="nav-link text-sm" @click="page='dashboard'; loadDashboard()">控制台</span>
+          <span class="nav-link text-sm" @click="page='recharge'">充值</span>
+          <span class="nav-link text-sm text-slate-400" @click="logout()">退出</span>
+        </div>
+      </template>
+    </div>
+  </div>
+</nav>
+
+<!-- 首页 -->
+<div x-show="page==='home'" class="pt-20">
+  <!-- Hero -->
+  <section class="max-w-6xl mx-auto px-6 py-24 text-center">
+    <div class="inline-block mb-4 px-4 py-1 rounded-full text-xs border border-purple-500/30 bg-purple-500/10 text-purple-300">🚀 稳定、快速、易接入</div>
+    <h1 class="text-5xl font-bold mb-6 leading-tight">像用电一样，<span class="gradient-text">用 AI API</span></h1>
+    <p class="text-xl text-slate-400 mb-10 max-w-2xl mx-auto">注册·充值·填Key即用。支持 GPT-4o、Claude、Gemini 等主流模型，完全兼容 OpenAI 接口格式。</p>
+    <div class="flex gap-4 justify-center">
+      <button class="btn-primary px-8 py-3 rounded-xl font-medium text-white" @click="page='register'">免费注册</button>
+      <a href="#pricing" class="px-8 py-3 rounded-xl font-medium border border-white/20 hover:border-white/40 transition">查看定价</a>
+    </div>
+    <!-- 代码示例 -->
+    <div class="mt-16 card rounded-2xl p-6 text-left max-w-2xl mx-auto">
+      <div class="flex items-center gap-2 mb-4 text-sm text-slate-400">
+        <span class="w-3 h-3 rounded-full bg-red-500"></span>
+        <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+        <span class="w-3 h-3 rounded-full bg-green-500"></span>
+        <span class="ml-2">快速接入示例</span>
+      </div>
+      <pre class="text-sm text-green-400 overflow-x-auto"><code>from openai import OpenAI
+
+client = OpenAI(
+    api_key="sk-你的Key",
+    base_url="https://你的域名/v1"
+)
+
+resp = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "你好"}]
+)
+print(resp.choices[0].message.content)</code></pre>
+    </div>
+  </section>
+
+  <!-- 特性 -->
+  <section class="max-w-6xl mx-auto px-6 py-16">
+    <h2 class="text-3xl font-bold text-center mb-12">为什么选择星桥 API</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <template x-for="f in features">
+        <div class="card rounded-2xl p-6">
+          <div class="text-3xl mb-4" x-text="f.icon"></div>
+          <h3 class="text-lg font-semibold mb-2" x-text="f.title"></h3>
+          <p class="text-slate-400 text-sm" x-text="f.desc"></p>
+        </div>
+      </template>
+    </div>
+  </section>
+
+  <!-- 定价 -->
+  <section id="pricing" class="max-w-6xl mx-auto px-6 py-16">
+    <h2 class="text-3xl font-bold text-center mb-4">透明定价</h2>
+    <p class="text-center text-slate-400 mb-12">按实际使用量计费，无月费，无最低消费</p>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+      <template x-for="p in plans">
+        <div class="card rounded-2xl p-6 text-center" :class="p.hot?'border-purple-500/50':''">
+          <template x-if="p.hot"><div class="text-xs text-purple-300 mb-2 bg-purple-500/20 rounded-full px-3 py-1 inline-block">最受欢迎</div></template>
+          <h3 class="text-xl font-bold mb-2" x-text="p.name"></h3>
+          <div class="text-4xl font-bold gradient-text mb-1" x-text="p.price"></div>
+          <div class="text-slate-400 text-sm mb-6" x-text="p.unit"></div>
+          <ul class="text-sm text-left space-y-2">
+            <template x-for="item in p.features">
+              <li class="flex items-center gap-2"><span class="text-green-400">✓</span><span x-text="item"></span></li>
+            </template>
+          </ul>
+          <button class="btn-primary w-full mt-6 py-2 rounded-xl text-white" @click="page='register'">立即开始</button>
+        </div>
+      </template>
+    </div>
+  </section>
+
+  <!-- 支持模型 -->
+  <section class="max-w-6xl mx-auto px-6 py-16">
+    <h2 class="text-3xl font-bold text-center mb-12">支持的模型</h2>
+    <div class="flex flex-wrap gap-3 justify-center">
+      <template x-for="m in models">
+        <span class="card px-4 py-2 rounded-full text-sm" x-text="m"></span>
+      </template>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-white/10 py-10 text-center text-slate-500 text-sm">
+    <p>⚡ 星桥 API — 国内开发者的 AI API 首选中转平台</p>
+    <p class="mt-2">客服微信：请在管理后台查看 · 响应时间：工作日 9:00-22:00</p>
+  </footer>
+</div>
+
+<!-- 登录 -->
+<div x-show="page==='login'" class="pt-28 min-h-screen flex items-start justify-center px-4">
+  <div class="card rounded-2xl p-8 w-full max-w-md">
+    <h2 class="text-2xl font-bold mb-6 text-center">登录账户</h2>
+    <div class="space-y-4">
+      <div><label class="text-sm text-slate-400 mb-1 block">邮箱</label><input x-model="loginForm.email" type="email" placeholder="your@email.com"></div>
+      <div><label class="text-sm text-slate-400 mb-1 block">密码</label><input x-model="loginForm.password" type="password" placeholder="••••••••" @keydown.enter="doLogin()"></div>
+      <button class="btn-primary w-full py-3 rounded-xl text-white font-medium" @click="doLogin()" :disabled="loading" x-text="loading?'登录中...':'登录'"></button>
+    </div>
+    <p class="text-center mt-4 text-sm text-slate-400">还没有账户？<span class="text-purple-400 cursor-pointer" @click="page='register'">免费注册</span></p>
+  </div>
+</div>
+
+<!-- 注册 -->
+<div x-show="page==='register'" class="pt-28 min-h-screen flex items-start justify-center px-4">
+  <div class="card rounded-2xl p-8 w-full max-w-md">
+    <h2 class="text-2xl font-bold mb-6 text-center">创建账户</h2>
+    <div class="space-y-4">
+      <div><label class="text-sm text-slate-400 mb-1 block">邮箱</label><input x-model="regForm.email" type="email" placeholder="your@email.com"></div>
+      <div><label class="text-sm text-slate-400 mb-1 block">密码</label><input x-model="regForm.password" type="password" placeholder="至少6位"></div>
+      <button class="btn-primary w-full py-3 rounded-xl text-white font-medium" @click="doRegister()" :disabled="loading" x-text="loading?'注册中...':'免费注册'"></button>
+    </div>
+    <p class="text-center mt-4 text-sm text-slate-400">已有账户？<span class="text-purple-400 cursor-pointer" @click="page='login'">立即登录</span></p>
+  </div>
+</div>
+
+<!-- 控制台 -->
+<div x-show="page==='dashboard'" class="pt-20 max-w-6xl mx-auto px-6 py-8">
+  <div class="flex gap-2 mb-8 border-b border-white/10 pb-4">
+    <button class="tab-btn text-sm" :class="tab==='tokens'?'active':''" @click="tab='tokens'; loadTokens()">我的令牌</button>
+    <button class="tab-btn text-sm" :class="tab==='orders'?'active':''" @click="tab='orders'; loadOrders()">充值记录</button>
+    <button class="tab-btn text-sm" :class="tab==='docs'?'active':''" @click="tab='docs'">接入文档</button>
+  </div>
+
+  <!-- 余额卡片 -->
+  <div class="card rounded-2xl p-6 mb-6 flex items-center justify-between">
+    <div>
+      <div class="text-sm text-slate-400 mb-1">账户余额</div>
+      <div class="text-3xl font-bold gradient-text">¥ <span x-text="user.balance?.toFixed(4)||'0.0000'"></span></div>
+    </div>
+    <button class="btn-primary px-6 py-2 rounded-xl text-white text-sm" @click="page='recharge'">立即充值</button>
+  </div>
+
+  <!-- 令牌列表 -->
+  <div x-show="tab==='tokens'">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="font-semibold">API 令牌</h3>
+      <button class="btn-primary px-4 py-2 rounded-lg text-sm text-white" @click="showCreate=true">+ 新建令牌</button>
+    </div>
+    <!-- 新建表单 -->
+    <div x-show="showCreate" class="card rounded-xl p-4 mb-4">
+      <input x-model="newTokenName" placeholder="令牌名称（如：我的应用）" class="mb-3">
+      <div class="flex gap-2">
+        <button class="btn-primary px-4 py-2 rounded-lg text-sm text-white" @click="createToken()">创建</button>
+        <button class="px-4 py-2 rounded-lg text-sm border border-white/20" @click="showCreate=false">取消</button>
+      </div>
+    </div>
+    <template x-if="tokens.length===0">
+      <div class="text-center text-slate-400 py-12">还没有令牌，点击「新建令牌」创建</div>
+    </template>
+    <div class="space-y-3">
+      <template x-for="t in tokens" :key="t.id">
+        <div class="card rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-3">
+              <span class="font-medium" x-text="t.name"></span>
+              <span class="text-xs px-2 py-0.5 rounded-full" :class="t.is_active?'bg-green-500/20 text-green-400':'bg-red-500/20 text-red-400'" x-text="t.is_active?'正常':'停用'"></span>
+            </div>
+            <button class="text-red-400 text-xs hover:text-red-300" @click="deleteToken(t.id)">删除</button>
+          </div>
+          <div class="flex items-center gap-2 mb-3">
+            <code class="text-xs text-purple-300 bg-purple-500/10 px-3 py-1 rounded flex-1 truncate" x-text="t.key"></code>
+            <span class="copy-btn" @click="copy(t.key)">复制</span>
+          </div>
+          <div class="grid grid-cols-3 gap-3 text-xs text-slate-400">
+            <div>今日用量：<span class="text-white" x-text="'¥'+t.used_today.toFixed(4)"></span></div>
+            <div>累计消耗：<span class="text-white" x-text="'¥'+t.total_used.toFixed(4)"></span></div>
+            <div>限速：<span class="text-white" x-text="t.rpm_limit?t.rpm_limit+'RPM':'不限'"></span></div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- 充值记录 -->
+  <div x-show="tab==='orders'">
+    <h3 class="font-semibold mb-4">充值记录</h3>
+    <template x-if="orders.length===0">
+      <div class="text-center text-slate-400 py-12">暂无充值记录</div>
+    </template>
+    <div class="space-y-3">
+      <template x-for="o in orders" :key="o.id">
+        <div class="card rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <div class="text-sm font-medium" x-text="payMethodName(o.pay_method)+' ¥'+o.amount"></div>
+            <div class="text-xs text-slate-400 mt-1" x-text="'到账 ¥'+o.credits+' · '+new Date(o.created_at).toLocaleString()"></div>
+          </div>
+          <span class="text-xs px-3 py-1 rounded-full" :class="{
+            'bg-yellow-500/20 text-yellow-400': o.status==='pending',
+            'bg-green-500/20 text-green-400': o.status==='approved',
+            'bg-red-500/20 text-red-400': o.status==='rejected'
+          }" x-text="{'pending':'审核中','approved':'已到账','rejected':'已拒绝'}[o.status]"></span>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- 接入文档 -->
+  <div x-show="tab==='docs'">
+    <h3 class="font-semibold mb-4">快速接入</h3>
+    <div class="card rounded-xl p-6 space-y-4">
+      <div>
+        <div class="text-sm text-slate-400 mb-2">API 地址（Base URL）</div>
+        <div class="flex items-center gap-2">
+          <code class="text-sm text-purple-300 bg-purple-500/10 px-3 py-2 rounded flex-1" x-text="apiBase+'/v1'"></code>
+          <span class="copy-btn" @click="copy(apiBase+'/v1')">复制</span>
+        </div>
+      </div>
+      <div>
+        <div class="text-sm text-slate-400 mb-2">Python 示例</div>
+        <pre class="text-sm text-green-400 bg-black/30 rounded-xl p-4 overflow-x-auto"><code>from openai import OpenAI
+
+client = OpenAI(
+    api_key="sk-你的令牌Key",
+    base_url="<span x-text="apiBase"></span>/v1"
+)
+
+response = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "你好"}]
+)
+print(response.choices[0].message.content)</code></pre>
+      </div>
+      <div>
+        <div class="text-sm text-slate-400 mb-2">支持的接口</div>
+        <ul class="text-sm space-y-1 text-slate-300">
+          <li>✓ POST /v1/chat/completions（支持流式）</li>
+          <li>✓ POST /v1/embeddings</li>
+          <li>✓ GET /v1/models</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 充值页 -->
+<div x-show="page==='recharge'" class="pt-28 max-w-xl mx-auto px-4">
+  <h2 class="text-2xl font-bold mb-6">充值账户</h2>
+  <div class="card rounded-2xl p-6 space-y-5">
+    <div>
+      <label class="text-sm text-slate-400 mb-2 block">选择充值方式</label>
+      <div class="grid grid-cols-2 gap-3">
+        <template x-for="m in payMethods">
+          <div class="card rounded-xl p-3 text-center cursor-pointer transition" :class="rechargeForm.pay_method===m.key?'border-purple-500 bg-purple-500/10':''" @click="rechargeForm.pay_method=m.key">
+            <div class="text-2xl mb-1" x-text="m.icon"></div>
+            <div class="text-sm" x-text="m.name"></div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- 收款码展示 -->
+    <template x-if="rechargeForm.pay_method">
+      <div class="card rounded-xl p-4 text-center">
+        <div class="text-sm text-slate-400 mb-3" x-text="payQRTip()"></div>
+        <div class="w-40 h-40 mx-auto bg-white/10 rounded-xl flex items-center justify-center text-slate-500 text-sm">收款码占位<br>请在管理后台上传</div>
+        <p class="text-xs text-slate-400 mt-3">转账时备注你的邮箱，方便核对</p>
+      </div>
+    </template>
+
+    <div>
+      <label class="text-sm text-slate-400 mb-1 block" x-text="rechargeForm.pay_method==='usdt'||rechargeForm.pay_method==='lianlian'||rechargeForm.pay_method==='pingpong'?'付款金额（美元）':'付款金额（人民币）'"></label>
+      <input x-model="rechargeForm.amount" type="number" min="1" step="1" placeholder="请输入金额">
+      <p class="text-xs text-slate-400 mt-1" x-show="rechargeForm.amount>0" x-text="calcCredits()"></p>
+    </div>
+    <div>
+      <label class="text-sm text-slate-400 mb-1 block">备注（可选，填写转账截图说明）</label>
+      <textarea x-model="rechargeForm.remark" rows="2" placeholder="如：已通过支付宝转账，订单号 xxx"></textarea>
+    </div>
+    <button class="btn-primary w-full py-3 rounded-xl text-white font-medium" @click="submitRecharge()" :disabled="loading" x-text="loading?'提交中...':'提交充值申请'"></button>
+    <p class="text-xs text-slate-400 text-center">提交后平台将核实到账情况，自动审核通常在1小时内完成</p>
+  </div>
+</div>
+
+<script>
+const API = '';  // 同域
+function app() {
+  return {
+    page: 'home',
+    tab: 'tokens',
+    token: localStorage.getItem('_token') || '',
+    user: {},
+    tokens: [],
+    orders: [],
+    loading: false,
+    showCreate: false,
+    newTokenName: '',
+    loginForm: {email:'', password:''},
+    regForm: {email:'', password:''},
+    rechargeForm: {amount:'', pay_method:'wechat', remark:''},
+    toast: {show:false, msg:'', type:'ok'},
+    apiBase: window.location.origin,
+    features: [
+      {icon:'🚀', title:'极速接入', desc:'兼容 OpenAI SDK，改一行 base_url 即可迁移，无需改代码逻辑'},
+      {icon:'💰', title:'按量计费', desc:'无月费，无最低消费，实际使用多少扣多少'},
+      {icon:'🛡', title:'稳定可靠', desc:'多线路智能路由，上游故障自动切换，保障服务可用性'},
+      {icon:'🌍', title:'主流模型', desc:'GPT-4o、Claude 3.5、Gemini 1.5 Pro 等主流模型均已支持'},
+      {icon:'📊', title:'用量可视', desc:'实时查看每个 Key 的用量、消耗、请求记录'},
+      {icon:'🔑', title:'多Key管理', desc:'创建多个 API Key，灵活分配给不同项目或应用'},
+    ],
+    plans: [
+      {name:'入门', price:'¥1', unit:'起充', hot:false, features:['按量计费','支持所有模型','7天余额有效期','邮件支持']},
+      {name:'标准', price:'¥50', unit:'推荐充值额', hot:true, features:['按量计费','支持所有模型','180天余额有效期','优先客服支持','专属技术支持']},
+      {name:'企业', price:'¥500+', unit:'大额优惠', hot:false, features:['按量计费+折扣','支持所有模型','365天余额有效期','专属客户经理','SLA 保障']},
+    ],
+    models: ['gpt-4o','gpt-4o-mini','gpt-3.5-turbo','claude-3-5-sonnet','claude-3-5-haiku','gemini-1.5-pro','gemini-1.5-flash','deepseek-v3','qwen-max','llama-3.3-70b'],
+    payMethods: [
+      {key:'wechat', icon:'💚', name:'微信支付'},
+      {key:'alipay', icon:'💙', name:'支付宝'},
+      {key:'lianlian', icon:'🌐', name:'连连国际'},
+      {key:'pingpong', icon:'🏓', name:'PingPong'},
+      {key:'usdt', icon:'💵', name:'USDT'},
+    ],
+
+    init() {
+      if (this.token) this.loadMe();
+    },
+
+    showToast(msg, type='ok') {
+      this.toast = {show:true, msg, type};
+      setTimeout(()=>this.toast.show=false, 3000);
+    },
+
+    async req(method, url, body) {
+      const headers = {'Content-Type':'application/json'};
+      if (this.token) headers['Authorization'] = 'Bearer '+this.token;
+      const r = await fetch(API+url, {method, headers, body: body?JSON.stringify(body):undefined});
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail||'请求失败');
+      return d;
+    },
+
+    async doLogin() {
+      this.loading = true;
+      try {
+        const fd = new FormData();
+        fd.append('username', this.loginForm.email);
+        fd.append('password', this.loginForm.password);
+        const r = await fetch(API+'/api/auth/login', {method:'POST', body:fd});
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail||'登录失败');
+        this.token = d.access_token;
+        localStorage.setItem('_token', this.token);
+        await this.loadMe();
+        this.page = 'dashboard';
+        this.tab = 'tokens';
+        this.loadTokens();
+        this.showToast('登录成功');
+      } catch(e) { this.showToast(e.message,'err'); }
+      this.loading = false;
+    },
+
+    async doRegister() {
+      this.loading = true;
+      try {
+        const d = await this.req('POST', '/api/auth/register', this.regForm);
+        this.token = d.access_token;
+        localStorage.setItem('_token', this.token);
+        await this.loadMe();
+        this.page = 'dashboard';
+        this.tab = 'tokens';
+        this.showToast('注册成功，欢迎使用！');
+      } catch(e) { this.showToast(e.message,'err'); }
+      this.loading = false;
+    },
+
+    logout() {
+      this.token = '';
+      localStorage.removeItem('_token');
+      this.user = {};
+      this.page = 'home';
+    },
+
+    async loadMe() {
+      try { this.user = await this.req('GET', '/api/user/me'); } catch(e){}
+    },
+
+    async loadDashboard() {
+      await this.loadMe();
+      this.loadTokens();
+    },
+
+    async loadTokens() {
+      try { this.tokens = await this.req('GET', '/api/tokens'); } catch(e){}
+    },
+
+    async createToken() {
+      try {
+        await this.req('POST', '/api/tokens', {name: this.newTokenName||'默认令牌'});
+        this.showCreate = false;
+        this.newTokenName = '';
+        this.loadTokens();
+        this.showToast('令牌创建成功');
+      } catch(e) { this.showToast(e.message,'err'); }
+    },
+
+    async deleteToken(id) {
+      if (!confirm('确认删除该令牌？')) return;
+      try {
+        await this.req('DELETE', '/api/tokens/'+id);
+        this.loadTokens();
+        this.showToast('已删除');
+      } catch(e) { this.showToast(e.message,'err'); }
+    },
+
+    async loadOrders() {
+      try { this.orders = await this.req('GET', '/api/recharge'); } catch(e){}
+    },
+
+    async submitRecharge() {
+      if (!this.rechargeForm.amount || this.rechargeForm.amount <= 0) {
+        this.showToast('请填写充值金额','err'); return;
+      }
+      this.loading = true;
+      try {
+        await this.req('POST', '/api/recharge', {
+          amount: parseFloat(this.rechargeForm.amount),
+          pay_method: this.rechargeForm.pay_method,
+          remark: this.rechargeForm.remark,
+        });
+        this.showToast('充值申请已提交，审核通常在1小时内完成');
+        this.rechargeForm = {amount:'', pay_method:'wechat', remark:''};
+        this.page = 'dashboard';
+        this.tab = 'orders';
+        this.loadOrders();
+      } catch(e) { this.showToast(e.message,'err'); }
+      this.loading = false;
+    },
+
+    payQRTip() {
+      const tips = {wechat:'扫码向微信收款码转账',alipay:'扫码向支付宝收款码转账',lianlian:'通过连连国际向以下账户汇款',pingpong:'通过 PingPong 向以下账户汇款',usdt:'发送 USDT(TRC20) 到以下地址'};
+      return tips[this.rechargeForm.pay_method]||'';
+    },
+
+    calcCredits() {
+      const amt = parseFloat(this.rechargeForm.amount)||0;
+      const m = this.rechargeForm.pay_method;
+      const credits = ['usdt','lianlian','pingpong'].includes(m) ? amt*7 : amt;
+      return `预计到账 ¥${credits.toFixed(2)} 额度`;
+    },
+
+    payMethodName(m) {
+      return {wechat:'微信支付',alipay:'支付宝',lianlian:'连连国际',pingpong:'PingPong',usdt:'USDT'}[m]||m;
+    },
+
+    copy(text) {
+      navigator.clipboard.writeText(text).then(()=>this.showToast('已复制'));
+    },
+  }
+}
+</script>
+</body>
+</html>

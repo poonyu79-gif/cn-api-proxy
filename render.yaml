@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: cn-api-proxy
+    runtime: python
+    region: singapore
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: UPSTREAM_BASE_URL
+        value: https://xinyuanai666.com
+      - key: UPSTREAM_API_KEY
+        value: sk-3mgc4tmVonhkLL98yWQFGSpx7BHdYmYlZwOp7BR6frKuc3uF
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_EMAIL
+        value: admin@nexus.com
+      - key: ADMIN_PASSWORD
+        value: qwer1234
+      - key: DATABASE_URL
+        value: sqlite:////tmp/cn_proxy.db
