@@ -11,7 +11,7 @@ services:
       - key: UPSTREAM_API_KEY
         value: sk-3mgc4tmVonhkLL98yWQFGSpx7BHdYmYlZwOp7BR6frKuc3uF
       - key: SECRET_KEY
-        generateValue: true
+        value: cn-proxy-jwt-secret-xingqiao-2026!
       - key: ADMIN_EMAIL
         value: admin@nexus.com
       - key: ADMIN_PASSWORD

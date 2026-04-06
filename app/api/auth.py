@@ -1,11 +1,11 @@
-import os, secrets
+import os
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from jose import jwt
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from app.models.base import get_db
 from app.models.user import User
 

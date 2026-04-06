@@ -1,10 +1,10 @@
-import os, time, asyncio
+import os, time, json
 from datetime import datetime, date
 from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
 from sqlalchemy.orm import Session
 import httpx
-from app.models.base import get_db
+from app.models.base import get_db, Session as DBSession
 from app.models.token import Token
 from app.models.user import User
 from app.models.log import RequestLog
@@ -26,7 +26,6 @@ def _check_rpm(token: Token) -> None:
         return
     now = time.time()
     bucket = _rpm_counter.setdefault(token.id, [])
-    # 保留1分钟内的请求
     _rpm_counter[token.id] = [t for t in bucket if now - t < 60]
     if len(_rpm_counter[token.id]) >= token.rpm_limit:
         raise HTTPException(429, detail={"error": {"message": "Rate limit exceeded", "type": "rate_limit_error"}})
@@ -45,9 +44,35 @@ def _check_balance(user: User, token: Token) -> None:
     if token.daily_limit > 0 and token.used_today >= token.daily_limit:
         raise HTTPException(429, detail={"error": {"message": "Daily limit exceeded", "type": "rate_limit_error"}})
 
+def _deduct_and_log(user_id: int, token_id: int, model: str,
+                    pt: int, ct: int, cost: float, sc: int, lat: int):
+    """在独立 session 里完成扣费和日志，避免流式响应中原 session 已关闭的问题"""
+    db = DBSession()
+    try:
+        u = db.get(User, user_id)
+        t = db.get(Token, token_id)
+        if u:
+            u.balance = max(0.0, u.balance - cost)
+        if t:
+            t.used_today += cost
+            t.total_used += cost
+        log = RequestLog(
+            user_id=user_id, token_id=token_id, model=model,
+            prompt_tokens=pt, completion_tokens=ct, cost=cost,
+            status_code=sc, latency_ms=lat
+        )
+        db.add(log)
+        db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
+
 @router.post("/v1/chat/completions")
 async def chat_completions(request: Request, token: Token = Depends(get_api_token), db: Session = Depends(get_db)):
     user = db.get(User, token.user_id)
+    if not user:
+        raise HTTPException(401, detail={"error": {"message": "User not found", "type": "invalid_request_error"}})
     _reset_daily_if_needed(token, db)
     _check_rpm(token)
     _check_balance(user, token)
@@ -59,56 +84,81 @@ async def chat_completions(request: Request, token: Token = Depends(get_api_toke
     }
     stream = body.get("stream", False)
     start = time.time()
+    user_id = user.id
+    token_id = token.id
+    model = body.get("model", "")
 
-    async with httpx.AsyncClient(timeout=120) as client:
-        if stream:
-            async def generate():
-                total_tokens = 0
+    if stream:
+        async def generate():
+            total_tokens = 0
+            status_code = 200
+            async with httpx.AsyncClient(timeout=120) as client:
                 try:
                     async with client.stream(
                         "POST", f"{UPSTREAM_BASE}/v1/chat/completions",
                         json=body, headers=headers
                     ) as resp:
+                        status_code = resp.status_code
                         async for chunk in resp.aiter_bytes():
                             yield chunk
-                            # 粗略估算 token（每个 chunk 约 5 token）
-                            total_tokens += 5
-                finally:
-                    cost = round(total_tokens * COST_PER_TOKEN, 6)
-                    latency = int((time.time() - start) * 1000)
-                    _deduct(user, token, cost, db)
-                    _log(user, token, body.get("model",""), 0, total_tokens, cost, 200, latency, db)
+                            # 尝试从 SSE data 里解析 token 数，失败则粗估
+                            try:
+                                text = chunk.decode("utf-8", errors="ignore")
+                                for line in text.splitlines():
+                                    if line.startswith("data:") and "[DONE]" not in line:
+                                        d = json.loads(line[5:].strip())
+                                        u = d.get("usage") or {}
+                                        if u.get("total_tokens"):
+                                            total_tokens = u["total_tokens"]
+                                        elif not total_tokens:
+                                            total_tokens += 3
+                            except Exception:
+                                total_tokens += 3
+                except Exception as e:
+                    yield f"data: {{\"error\": \"{str(e)}\"}}\n\n".encode()
+            cost = round(total_tokens * COST_PER_TOKEN, 6)
+            latency = int((time.time() - start) * 1000)
+            _deduct_and_log(user_id, token_id, model, 0, total_tokens, cost, status_code, latency)
 
-            return StreamingResponse(generate(), media_type="text/event-stream")
-        else:
+        return StreamingResponse(generate(), media_type="text/event-stream")
+    else:
+        async with httpx.AsyncClient(timeout=120) as client:
             resp = await client.post(
                 f"{UPSTREAM_BASE}/v1/chat/completions",
                 json=body, headers=headers
             )
-            latency = int((time.time() - start) * 1000)
+        latency = int((time.time() - start) * 1000)
+        try:
             data = resp.json()
-            usage = data.get("usage", {})
-            prompt_tokens = usage.get("prompt_tokens", 0)
-            completion_tokens = usage.get("completion_tokens", 0)
-            cost = round((prompt_tokens + completion_tokens) * COST_PER_TOKEN, 6)
-            _deduct(user, token, cost, db)
-            _log(user, token, body.get("model",""), prompt_tokens, completion_tokens, cost, resp.status_code, latency, db)
-            return JSONResponse(content=data, status_code=resp.status_code)
+        except Exception:
+            data = {"error": {"message": "Upstream returned invalid JSON", "type": "api_error"}}
+        usage = data.get("usage") or {}
+        prompt_tokens = usage.get("prompt_tokens", 0)
+        completion_tokens = usage.get("completion_tokens", 0)
+        cost = round((prompt_tokens + completion_tokens) * COST_PER_TOKEN, 6)
+        _deduct_and_log(user_id, token_id, model, prompt_tokens, completion_tokens, cost, resp.status_code, latency)
+        return JSONResponse(content=data, status_code=resp.status_code)
 
 @router.post("/v1/embeddings")
 async def embeddings(request: Request, token: Token = Depends(get_api_token), db: Session = Depends(get_db)):
     user = db.get(User, token.user_id)
+    if not user:
+        raise HTTPException(401, detail={"error": {"message": "User not found", "type": "invalid_request_error"}})
     _check_balance(user, token)
     body = await request.json()
     headers = {"Authorization": f"Bearer {UPSTREAM_KEY}", "Content-Type": "application/json"}
+    start = time.time()
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.post(f"{UPSTREAM_BASE}/v1/embeddings", json=body, headers=headers)
-    data = resp.json()
-    usage = data.get("usage", {})
-    tokens = usage.get("total_tokens", 0)
-    cost = round(tokens * COST_PER_TOKEN * 0.1, 6)
-    _deduct(user, token, cost, db)
-    _log(user, token, body.get("model",""), tokens, 0, cost, resp.status_code, 0, db)
+    latency = int((time.time() - start) * 1000)
+    try:
+        data = resp.json()
+    except Exception:
+        data = {"error": {"message": "Upstream returned invalid JSON", "type": "api_error"}}
+    usage = data.get("usage") or {}
+    total_tokens = usage.get("total_tokens", 0)
+    cost = round(total_tokens * COST_PER_TOKEN * 0.1, 6)
+    _deduct_and_log(user.id, token.id, body.get("model", ""), total_tokens, 0, cost, resp.status_code, latency)
     return JSONResponse(content=data, status_code=resp.status_code)
 
 @router.get("/v1/models")
@@ -116,7 +166,10 @@ async def list_models(token: Token = Depends(get_api_token)):
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.get(f"{UPSTREAM_BASE}/v1/models",
                                 headers={"Authorization": f"Bearer {UPSTREAM_KEY}"})
-    return JSONResponse(content=resp.json())
+    try:
+        return JSONResponse(content=resp.json())
+    except Exception:
+        return JSONResponse(content={"object": "list", "data": []})
 
 def _deduct(user: User, token: Token, cost: float, db: Session):
     user.balance = max(0.0, user.balance - cost)

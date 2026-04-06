@@ -4,7 +4,11 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 DB_URL = os.getenv("DATABASE_URL", "sqlite:////tmp/cn_proxy.db")
 if DB_URL.startswith("sqlite"):
-    os.makedirs(os.path.dirname(DB_URL.replace("sqlite:///", "")), exist_ok=True)
+    # 提取文件路径：去掉 sqlite:/// 或 sqlite:////
+    db_path = DB_URL[len("sqlite:///"):]
+    db_dir = os.path.dirname(db_path)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
 
 engine = create_engine(DB_URL, connect_args={"check_same_thread": False} if "sqlite" in DB_URL else {})
 Session = sessionmaker(bind=engine, autocommit=False, autoflush=False)
