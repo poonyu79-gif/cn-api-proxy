@@ -442,10 +442,12 @@
     </div>
 
     <!-- 选项卡 -->
-    <div class="bg-gray-200 rounded-xl p-1 flex gap-1 mb-6 w-fit">
+    <div class="bg-gray-200 rounded-xl p-1 flex flex-wrap gap-1 mb-6 w-fit">
       <button class="px-4 py-1.5 text-sm rounded-lg transition font-medium" :class="tab==='tokens'?'tab-active':'tab-inactive'" @click="tab='tokens'; loadTokens()">API 令牌</button>
       <button class="px-4 py-1.5 text-sm rounded-lg transition font-medium" :class="tab==='orders'?'tab-active':'tab-inactive'" @click="tab='orders'; loadOrders()">充值记录</button>
+      <button class="px-4 py-1.5 text-sm rounded-lg transition font-medium" :class="tab==='usage'?'tab-active':'tab-inactive'" @click="tab='usage'; loadLogs()">使用记录</button>
       <button class="px-4 py-1.5 text-sm rounded-lg transition font-medium" :class="tab==='docs'?'tab-active':'tab-inactive'" @click="tab='docs'">接入文档</button>
+      <button class="px-4 py-1.5 text-sm rounded-lg transition font-medium" :class="tab==='settings'?'tab-active':'tab-inactive'" @click="tab='settings'">账户设置</button>
     </div>
 
     <!-- 令牌列表 -->
@@ -472,7 +474,12 @@
                 <span class="font-medium text-gray-900 text-sm" x-text="t.name"></span>
                 <span class="text-xs px-2 py-0.5 rounded-full font-medium" :class="t.is_active?'bg-green-50 text-green-700':'bg-red-50 text-red-600'" x-text="t.is_active?'正常':'停用'"></span>
               </div>
-              <button class="text-xs text-red-400 hover:text-red-600 transition" @click="deleteToken(t.id)">删除</button>
+              <div class="flex items-center gap-2">
+                <button class="text-xs px-2.5 py-1 rounded-lg border transition"
+                  :class="t.is_active?'border-orange-200 text-orange-500 hover:bg-orange-50':'border-green-200 text-green-600 hover:bg-green-50'"
+                  @click="toggleToken(t.id)" x-text="t.is_active?'停用':'启用'"></button>
+                <button class="text-xs text-red-400 hover:text-red-600 transition" @click="deleteToken(t.id)">删除</button>
+              </div>
             </div>
             <div class="flex items-center gap-2 mb-3">
               <code class="text-xs text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg flex-1 truncate font-mono" x-text="t.key"></code>
@@ -508,6 +515,96 @@
       </div>
     </div>
 
+    <!-- 使用记录 -->
+    <div x-show="tab==='usage'">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm text-gray-500">最近 <span x-text="logs.length"></span> 条请求记录</span>
+        <button class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600 transition" @click="loadLogs()">刷新</button>
+      </div>
+      <template x-if="logs.length===0">
+        <div class="card p-12 text-center text-gray-400 text-sm">暂无调用记录</div>
+      </template>
+      <div class="card overflow-hidden" x-show="logs.length>0">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-gray-100 bg-gray-50">
+                <th class="text-left px-4 py-2.5 text-xs font-medium text-gray-500">模型</th>
+                <th class="text-right px-4 py-2.5 text-xs font-medium text-gray-500">输入</th>
+                <th class="text-right px-4 py-2.5 text-xs font-medium text-gray-500">输出</th>
+                <th class="text-right px-4 py-2.5 text-xs font-medium text-gray-500">费用</th>
+                <th class="text-right px-4 py-2.5 text-xs font-medium text-gray-500">延迟</th>
+                <th class="text-center px-4 py-2.5 text-xs font-medium text-gray-500">状态</th>
+                <th class="text-right px-4 py-2.5 text-xs font-medium text-gray-500">时间</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+              <template x-for="l in logs" :key="l.id">
+                <tr class="hover:bg-gray-50 transition">
+                  <td class="px-4 py-2.5 font-mono text-xs text-indigo-700 truncate max-w-[140px]" x-text="l.model||'—'"></td>
+                  <td class="px-4 py-2.5 text-right text-xs text-gray-600" x-text="l.prompt_tokens"></td>
+                  <td class="px-4 py-2.5 text-right text-xs text-gray-600" x-text="l.completion_tokens"></td>
+                  <td class="px-4 py-2.5 text-right text-xs font-medium text-gray-900" x-text="'¥'+(l.cost||0).toFixed(6)"></td>
+                  <td class="px-4 py-2.5 text-right text-xs text-gray-500" x-text="l.latency_ms+'ms'"></td>
+                  <td class="px-4 py-2.5 text-center">
+                    <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                      :class="l.status_code===200?'bg-green-50 text-green-700':'bg-red-50 text-red-600'"
+                      x-text="l.status_code"></span>
+                  </td>
+                  <td class="px-4 py-2.5 text-right text-xs text-gray-400" x-text="new Date(l.created_at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 账户设置 -->
+    <div x-show="tab==='settings'">
+      <div class="max-w-md space-y-4">
+        <div class="card p-5">
+          <h3 class="text-sm font-semibold text-gray-900 mb-4">修改密码</h3>
+          <div class="space-y-3">
+            <div>
+              <label class="text-xs text-gray-500 mb-1 block">当前密码</label>
+              <input class="inp" x-model="pwf.old_password" type="password" placeholder="••••••••">
+            </div>
+            <div>
+              <label class="text-xs text-gray-500 mb-1 block">新密码</label>
+              <input class="inp" x-model="pwf.new_password" type="password" placeholder="至少 6 位">
+            </div>
+            <div>
+              <label class="text-xs text-gray-500 mb-1 block">确认新密码</label>
+              <input class="inp" x-model="pwf.confirm" type="password" placeholder="再次输入新密码">
+            </div>
+            <button class="btn-primary w-full py-2.5 rounded-xl font-medium text-sm" @click="changePassword()" :disabled="loading" x-text="loading?'保存中...':'保存新密码'"></button>
+          </div>
+        </div>
+        <div class="card p-5">
+          <h3 class="text-sm font-semibold text-gray-900 mb-2">账户信息</h3>
+          <div class="space-y-1.5 text-sm text-gray-600">
+            <div class="flex justify-between">
+              <span class="text-gray-400">邮箱</span>
+              <span x-text="user.email"></span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">用户 ID</span>
+              <span x-text="user.id"></span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">注册时间</span>
+              <span x-text="user.created_at?new Date(user.created_at).toLocaleDateString('zh-CN'):'—'"></span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">账户类型</span>
+              <span x-text="user.is_admin?'管理员':'普通用户'"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 接入文档 -->
     <div x-show="tab==='docs'">
       <div class="card p-6 space-y-5">
@@ -532,8 +629,10 @@
           <div class="text-xs text-gray-400 mb-2 font-medium uppercase tracking-wide">支持的接口</div>
           <div class="space-y-1.5 text-sm text-gray-600">
             <div class="flex items-center gap-2"><svg class="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> POST /v1/chat/completions（支持流式 SSE）</div>
+            <div class="flex items-center gap-2"><svg class="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> POST /v1/completions（传统补全）</div>
             <div class="flex items-center gap-2"><svg class="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> POST /v1/embeddings</div>
             <div class="flex items-center gap-2"><svg class="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> GET /v1/models</div>
+            <div class="flex items-center gap-2"><svg class="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> GET /v1/dashboard（余额查询，兼容 ChatBox 等工具）</div>
           </div>
         </div>
       </div>
@@ -602,13 +701,14 @@ function app() {
     tab: 'tokens',
     token: localStorage.getItem('_token')||'',
     user: JSON.parse(localStorage.getItem('_user')||'{}'),
-    tokens: [], orders: [],
+    tokens: [], orders: [], logs: [],
     loading: false,
     showCreate: false,
     newName: '',
     lf: {email:'', password:''},
     rf: {email:'', password:''},
     rcf: {amount:'', pay_method:'wechat', remark:''},
+    pwf: {old_password:'', new_password:'', confirm:''},
     toast: {show:false, msg:'', ok:true},
     activeVendor: 'all',
     origin: window.location.origin,
@@ -782,6 +882,13 @@ function app() {
       } catch(e) { this.showToast(e.message, false); }
     },
 
+    async toggleToken(id) {
+      try {
+        await this.req('PATCH', '/api/tokens/'+id+'/toggle');
+        this.loadTokens();
+      } catch(e) { this.showToast(e.message, false); }
+    },
+
     async deleteToken(id) {
       if (!confirm('确认删除该令牌？删除后不可恢复')) return;
       try {
@@ -789,6 +896,29 @@ function app() {
         this.loadTokens();
         this.showToast('令牌已删除');
       } catch(e) { this.showToast(e.message, false); }
+    },
+
+    async loadLogs() {
+      try { this.logs = await this.req('GET', '/api/user/logs'); } catch(e) {}
+    },
+
+    async changePassword() {
+      if (!this.pwf.old_password || !this.pwf.new_password) {
+        this.showToast('请填写原密码和新密码', false); return;
+      }
+      if (this.pwf.new_password !== this.pwf.confirm) {
+        this.showToast('两次新密码不一致', false); return;
+      }
+      this.loading = true;
+      try {
+        await this.req('PATCH', '/api/user/password', {
+          old_password: this.pwf.old_password,
+          new_password: this.pwf.new_password,
+        });
+        this.showToast('密码修改成功，下次登录请使用新密码');
+        this.pwf = {old_password:'', new_password:'', confirm:''};
+      } catch(e) { this.showToast(e.message, false); }
+      this.loading = false;
     },
 
     async loadOrders() {
